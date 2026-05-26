@@ -2114,42 +2114,92 @@ function renderAnalytics() {
 ═══════════════════════════════════════════════ */
 
 /* ── Config ──────────────────────────────────── */
-const SS_API = 'https://api.semanticscholar.org/graph/v1/paper/search';
-const SS_FIELDS = 'title,authors,year,abstract,citationCount,externalIds,openAccessPdf,publicationTypes';
+const SS_API       = 'https://api.semanticscholar.org/graph/v1/paper/search';
+const SS_FIELDS    = 'title,authors,year,abstract,citationCount,externalIds,openAccessPdf,publicationTypes';
 const SS_PAGE_SIZE = 9;
+const SS_TIMEOUT   = 12000;   // ms before a single attempt is aborted
+const SS_RETRIES   = 2;       // auto-retry attempts on network failure
 
 /* ── State ───────────────────────────────────── */
 const _ss = {
-  query: '',
-  offset: 0,
-  total: 0,
+  query:   '',
+  offset:  0,
+  total:   0,
   loading: false,
 };
 
 /* ── XSS helper ──────────────────────────────── */
 function _esc(s) {
-  return String(s||'')
+  return String(s || '')
     .replace(/&/g,'&amp;').replace(/</g,'&lt;')
     .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-/* ── Fetch papers from Semantic Scholar ──────── */
-async function _fetchPapers(query, offset) {
+/* ── Sleep helper for retry back-off ─────────── */
+const _sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ── Classify errors precisely ───────────────── */
+function _classifyError(err) {
+  const s = String(err.message || err);
+  if (!navigator.onLine)            return { code: 'offline',  retry: false };
+  if (err.name === 'AbortError')    return { code: 'timeout',  retry: true  };
+  // HTTP status codes embedded as "API NNN"
+  if (/API 429/.test(s))            return { code: '429',      retry: false };
+  if (/API 5\d\d/.test(s))          return { code: '5xx',      retry: true  };
+  if (/API 4\d\d/.test(s))          return { code: '4xx',      retry: false };
+  // Network-level failures (CORS, DNS, no connection)
+  if (/fetch|network|Failed/i.test(s)) return { code: 'network', retry: true };
+  return                                      { code: 'unknown', retry: true  };
+}
+
+/* ── Single fetch attempt with AbortController timeout ── */
+async function _fetchOnce(query, offset) {
+  const ctrl   = new AbortController();
+  const timer  = setTimeout(() => ctrl.abort(), SS_TIMEOUT);
   const params = new URLSearchParams({
-    query, fields: SS_FIELDS,
-    limit: SS_PAGE_SIZE, offset,
+    query,
+    fields: SS_FIELDS,
+    limit:  SS_PAGE_SIZE,
+    offset,
   });
-  const res = await fetch(`${SS_API}?${params}`);
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  const data = await res.json();
-  return { papers: data.data || [], total: data.total || 0 };
+  try {
+    const res = await fetch(`${SS_API}?${params}`, {
+      method: 'GET',
+      signal: ctrl.signal,
+      // No custom headers — some mobile proxies reject non-standard headers
+      // and Semantic Scholar's public endpoint works without them.
+    });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const data = await res.json();
+    return { papers: data.data || [], total: data.total || 0 };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/* ── Fetch with auto-retry + exponential back-off ── */
+async function _fetchPapers(query, offset) {
+  let lastErr;
+  for (let attempt = 0; attempt <= SS_RETRIES; attempt++) {
+    try {
+      return await _fetchOnce(query, offset);
+    } catch (err) {
+      lastErr = err;
+      const { retry } = _classifyError(err);
+      const isLast = attempt === SS_RETRIES;
+      if (!retry || isLast) break;
+      // Back-off: 800 ms, 1600 ms …
+      await _sleep(800 * Math.pow(2, attempt));
+    }
+  }
+  throw lastErr;
 }
 
 /* ── Normalise one paper ──────────────────────── */
 function _normPaper(raw) {
-  const names = (raw.authors || []).map(a => a.name);
+  const names   = (raw.authors || []).map(a => a.name);
   const authors = names.length > 3
-    ? names.slice(0,3).join(', ') + ' et al.'
+    ? names.slice(0, 3).join(', ') + ' et al.'
     : names.join(', ') || 'Unknown Authors';
 
   const url = raw.openAccessPdf?.url
@@ -2157,24 +2207,23 @@ function _normPaper(raw) {
     || `https://www.semanticscholar.org/paper/${raw.paperId}`;
 
   const abstract = raw.abstract
-    ? (raw.abstract.length > 320 ? raw.abstract.slice(0,317)+'…' : raw.abstract)
+    ? (raw.abstract.length > 320 ? raw.abstract.slice(0, 317) + '…' : raw.abstract)
     : 'Abstract not available.';
 
-  const types = (raw.publicationTypes || []);
+  const types    = (raw.publicationTypes || []);
   const typeLabel = types.length ? types[0] : 'Research Article';
+  const isOA     = Boolean(raw.openAccessPdf?.url);
+  const cites    = raw.citationCount ?? 0;
 
-  const isOA = Boolean(raw.openAccessPdf?.url);
-  const cites = raw.citationCount ?? 0;
-
-  return { title: raw.title||'Untitled', authors, year: raw.year||'—',
+  return { title: raw.title || 'Untitled', authors, year: raw.year || '—',
            abstract, url, typeLabel, isOA, cites };
 }
 
 /* ── Render one card ─────────────────────────── */
 function _renderCard(p, i) {
-  const delay = (i % SS_PAGE_SIZE) * 0.07;
+  const delay    = (i % SS_PAGE_SIZE) * 0.07;
   const citClass = p.cites > 200 ? 'amber' : '';
-  const oaBadge = p.isOA
+  const oaBadge  = p.isOA
     ? `<span class="tag teal" title="Open Access">⬡ OA</span>` : '';
   return `
     <div class="glass-card result-card fade-in" style="transition-delay:${delay}s">
@@ -2196,25 +2245,35 @@ function _renderCard(p, i) {
 }
 
 /* ── Loading state ───────────────────────────── */
-function _renderLoading() {
+function _renderLoading(attempt) {
+  const label = attempt > 0
+    ? `Retrying… (attempt ${attempt + 1} of ${SS_RETRIES + 1})`
+    : 'Querying Semantic Scholar across 200M+ papers…';
   return `<div class="search-loading">
     <div class="search-loading-ring"></div>
-    <div class="search-loading-text">Querying Semantic Scholar across 200M+ papers…</div>
+    <div class="search-loading-text">${label}</div>
   </div>`;
 }
 
-/* ── Error state ─────────────────────────────── */
+/* ── Error state — precise, actionable messages ── */
 function _renderError(err) {
-  let msg = 'An unexpected error occurred. Please try again.';
-  if (!navigator.onLine) msg = 'You appear to be offline. Check your connection.';
-  else if (String(err).includes('429')) msg = 'Rate limit reached. Please wait a moment and retry.';
-  else if (String(err).includes('5')) msg = 'Semantic Scholar is temporarily unavailable. Try again shortly.';
-  else if (String(err).includes('Failed to fetch')) msg = 'Could not reach the API. This works on GitHub Pages with HTTPS.';
+  const { code } = _classifyError(err);
+  const msgs = {
+    offline:  'No internet connection detected. Please check your network and retry.',
+    timeout:  'The request timed out (>${SS_TIMEOUT / 1000}s). The API may be slow — please retry.',
+    '429':    'Rate limit reached (100 req / 5 min on the free tier). Wait a moment then retry.',
+    '5xx':    'Semantic Scholar servers returned an error. Usually resolves in seconds — please retry.',
+    '4xx':    'The search request was malformed. Try a different query.',
+    network:  'Network error reaching the API. If you\'re on GitHub Pages this should work — try refreshing.',
+    unknown:  'An unexpected error occurred. Open DevTools → Console for details, then retry.',
+  };
+  const msg = msgs[code] || msgs.unknown;
   return `<div class="search-state-msg">
     <div class="search-state-icon">⚠</div>
     <div class="search-state-title">Search Failed</div>
     <div class="search-state-desc">${_esc(msg)}</div>
-    <button class="search-btn" style="margin-top:1rem;padding:10px 24px" onclick="runSearch()">Retry →</button>
+    <button class="search-btn" style="margin-top:1rem;padding:10px 24px"
+            onclick="runSearch()">Retry →</button>
   </div>`;
 }
 
@@ -2250,18 +2309,21 @@ function _updateMeta(shown, total, q) {
 /* ── MAIN: runSearch ─────────────────────────── */
 async function runSearch() {
   const input = document.getElementById('mainSearch');
-  const q = (input?.value || '').trim() || 'graphene oxide nanoparticles';
+  const q     = (input?.value || '').trim() || 'graphene oxide nanoparticles';
   if (_ss.loading) return;
 
-  _ss.query = q; _ss.offset = 0; _ss.total = 0; _ss.loading = true;
+  _ss.query   = q;
+  _ss.offset  = 0;
+  _ss.total   = 0;
+  _ss.loading = true;
   _updateMeta(0, 0, q);
 
   const container = document.getElementById('searchResults');
-  container.innerHTML = _renderLoading();
+  container.innerHTML = _renderLoading(0);
 
   try {
     const { papers, total } = await _fetchPapers(q, 0);
-    _ss.total = total;
+    _ss.total  = total;
     _ss.offset = papers.length;
 
     if (!papers.length) {
@@ -2275,8 +2337,9 @@ async function runSearch() {
     if (_ss.offset < total) container.innerHTML += _renderLoadMore(_ss.offset, total);
     _updateMeta(_ss.offset, total, q);
     if (typeof observeFadeIns === 'function') observeFadeIns();
-  } catch(e) {
-    console.error('[NanoLit Search]', e);
+
+  } catch (e) {
+    console.error('[NanoLit Search] query:', q, '| error name:', e.name, '| message:', e.message);
     container.innerHTML = _renderError(e);
     _updateMeta(0, 0, q);
   } finally {
