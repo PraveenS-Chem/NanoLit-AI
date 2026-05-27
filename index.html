@@ -466,6 +466,8 @@ section:first-of-type { padding-top: 0; }
 .tag.violet { background:rgba(139,92,246,0.08);color:var(--accent-violet);border-color:rgba(139,92,246,0.2); }
 .tag.teal { background:rgba(0,255,200,0.08);color:var(--accent-teal);border-color:rgba(0,255,200,0.2); }
 .tag.amber { background:rgba(245,158,11,0.08);color:var(--accent-amber);border-color:rgba(245,158,11,0.2); }
+.tag.src-openalex { background:rgba(251,191,36,0.08);color:#fbbf24;border-color:rgba(251,191,36,0.25);letter-spacing:0.04em; }
+.tag.src-s2       { background:rgba(0,220,255,0.05); color:var(--text-muted);border-color:rgba(0,220,255,0.12);letter-spacing:0.04em; }
 .tag.view-link {
   cursor:pointer; text-decoration:none; display:inline-block;
   transition: var(--transition);
@@ -2109,24 +2111,36 @@ function renderAnalytics() {
 }
 
 /* ═══════════════════════════════════════════════
-   REAL LITERATURE SEARCH — Semantic Scholar API
-   No API key required. Free, open, CORS-enabled.
+   HYBRID SEARCH ENGINE
+   Primary:  OpenAlex  (200M+ works, no key needed)
+   Fallback: Semantic Scholar (if OpenAlex fails)
+   Both normalised to identical paper shape.
 ═══════════════════════════════════════════════ */
 
 /* ── Config ──────────────────────────────────── */
+// OpenAlex
+const OA_API       = 'https://api.openalex.org/works';
+const OA_PAGE_SIZE = 9;
+
+// Semantic Scholar (fallback)
 const SS_API       = 'https://api.semanticscholar.org/graph/v1/paper/search';
 const SS_FIELDS    = 'title,authors,year,abstract,citationCount,externalIds,openAccessPdf,publicationTypes';
 const SS_PAGE_SIZE = 9;
-const SS_TIMEOUT   = 25000;   // ms — 25 s covers cold mobile TLS handshake
-const SS_RETRIES   = 2;       // auto-retry attempts on network failure
+
+// Shared
+const SS_TIMEOUT   = 25000;   // ms — covers cold mobile TLS handshake
+const SS_RETRIES   = 0;       // no auto-retries — user clicks Retry explicitly
+const SS_COOLDOWN  = 4000;    // ms minimum between consecutive searches
 
 /* ── State ───────────────────────────────────── */
 const _ss = {
-  query:      '',      // last started query string
-  offset:     0,
-  total:      0,
-  loading:    false,
-  abortCtrl:  null,    // active AbortController — lets runSearch cancel in-flight fetches
+  query:        '',    // last started query string
+  offset:       0,
+  total:        0,
+  loading:      false,
+  abortCtrl:    null,  // active AbortController — lets runSearch cancel in-flight fetches
+  lastSearchAt: 0,     // Date.now() of last completed/failed search (cooldown tracking)
+  source:       null,  // 'openalex' | 'semanticscholar' | null (reset each new query)
 };
 
 /* ── XSS helper ──────────────────────────────── */
@@ -2153,65 +2167,108 @@ function _classifyError(err) {
   return                                      { code: 'unknown', retry: true  };
 }
 
-/* ── Single fetch attempt ────────────────────────────────────────── */
-async function _fetchOnce(query, offset) {
-  // Assign to shared slot so runSearch() can abort this from outside
-  const ctrl = new AbortController();
+/* ── Shared fetch helper (AbortController + timeout) ─────────────── */
+async function _timedFetch(url, options = {}) {
+  const ctrl  = new AbortController();
   _ss.abortCtrl = ctrl;
-
   const timer = setTimeout(() => ctrl.abort(), SS_TIMEOUT);
+  try {
+    const res = await fetch(url, { ...options, signal: ctrl.signal, cache: 'no-store' });
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
+/* ── OPENALEX ─────────────────────────────────────────────────────── */
+// page is 1-based (OpenAlex uses page= not offset=)
+async function _fetchOA(query, page) {
+  const params = new URLSearchParams({
+    search:        query,
+    'per-page':    OA_PAGE_SIZE,
+    page,
+    select:        'id,title,authorships,publication_year,abstract_inverted_index,cited_by_count,doi,open_access,type',
+    mailto:        'nanolit@github.io',   // OA best practice: polite pool
+  });
+  const data = await _timedFetch(`${OA_API}?${params}`);
+  return {
+    papers: (data.results || []).map(_normOA),
+    total:  data.meta?.count || 0,
+    source: 'openalex',
+  };
+}
+
+// Reconstruct abstract from OpenAlex inverted index
+// { "We": [0,4], "study": [1], ... }  →  "We study …"
+function _invertedToAbstract(inv) {
+  if (!inv || typeof inv !== 'object') return null;
+  const words = [];
+  for (const [word, positions] of Object.entries(inv)) {
+    for (const pos of positions) words[pos] = word;
+  }
+  return words.filter(Boolean).join(' ') || null;
+}
+
+function _normOA(raw) {
+  // Authors: authorships[].author.display_name
+  const names = (raw.authorships || []).map(a => a.author?.display_name).filter(Boolean);
+  const authors = names.length > 3
+    ? names.slice(0, 3).join(', ') + ' et al.'
+    : names.join(', ') || 'Unknown Authors';
+
+  const url = raw.doi
+    ? (raw.doi.startsWith('http') ? raw.doi : `https://doi.org/${raw.doi}`)
+    : (raw.id || '#');
+
+  const abstractRaw = _invertedToAbstract(raw.abstract_inverted_index);
+  const abstract = abstractRaw
+    ? (abstractRaw.length > 320 ? abstractRaw.slice(0, 317) + '…' : abstractRaw)
+    : 'Abstract not available.';
+
+  // OA type → readable label
+  const typeMap = {
+    'journal-article': 'Journal Article', 'review':          'Review Article',
+    'book-chapter':    'Book Chapter',     'proceedings-article': 'Conference Paper',
+    'dataset':         'Dataset',          'preprint':        'Preprint',
+  };
+  const typeLabel = typeMap[raw.type] || 'Research Article';
+  const isOA  = Boolean(raw.open_access?.is_oa);
+  const cites = raw.cited_by_count ?? 0;
+  const year  = raw.publication_year || '—';
+
+  return {
+    title:     raw.title || 'Untitled',
+    authors,
+    year,
+    abstract,
+    url,
+    typeLabel,
+    isOA,
+    cites,
+    source:    'openalex',   // source field on every normalised paper
+  };
+}
+
+/* ── SEMANTIC SCHOLAR (fallback) ──────────────────────────────────── */
+// offset is 0-based (SS uses offset= not page=)
+async function _fetchSS(query, offset) {
   const params = new URLSearchParams({
     query,
     fields: SS_FIELDS,
     limit:  SS_PAGE_SIZE,
     offset,
   });
-  try {
-    const res = await fetch(`${SS_API}?${params}`, {
-      method: 'GET',
-      signal: ctrl.signal,
-      // cache:'no-store' bypasses mobile carrier / ISP proxy caches that
-      // can return a stale negative CORS pre-flight, making every fetch
-      // fail instantly with "Failed to fetch" even when the API is fine.
-      cache:  'no-store',
-    });
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    const data = await res.json();
-    return { papers: data.data || [], total: data.total || 0 };
-  } finally {
-    clearTimeout(timer);
-  }
+  const data = await _timedFetch(`${SS_API}?${params}`);
+  return {
+    papers: (data.data || []).map(_normSS),
+    total:  data.total || 0,
+    source: 'semanticscholar',
+  };
 }
 
-/* ── Fetch with auto-retry ───────────────────────────────────────── */
-async function _fetchPapers(query, offset) {
-  let lastErr;
-  for (let attempt = 0; attempt <= SS_RETRIES; attempt++) {
-    // Keep spinner text updated so the user isn't staring at a frozen UI
-    if (attempt > 0) {
-      const txt = document.querySelector('.search-loading-text');
-      if (txt) txt.textContent =
-        `Retrying… (attempt ${attempt + 1} of ${SS_RETRIES + 1})`;
-    }
-    try {
-      return await _fetchOnce(query, offset);
-    } catch (err) {
-      lastErr = err;
-      const { retry } = _classifyError(err);
-      const isLast = attempt === SS_RETRIES;
-      if (!retry || isLast) break;
-      // Linear back-off: 1 s then 2 s — long enough to recover, short
-      // enough that the user doesn't think the page has frozen.
-      await _sleep(1000 * (attempt + 1));
-    }
-  }
-  throw lastErr;
-}
-
-/* ── Normalise one paper ──────────────────────── */
-function _normPaper(raw) {
-  const names   = (raw.authors || []).map(a => a.name);
+function _normSS(raw) {
+  const names = (raw.authors || []).map(a => a.name);
   const authors = names.length > 3
     ? names.slice(0, 3).join(', ') + ' et al.'
     : names.join(', ') || 'Unknown Authors';
@@ -2224,13 +2281,64 @@ function _normPaper(raw) {
     ? (raw.abstract.length > 320 ? raw.abstract.slice(0, 317) + '…' : raw.abstract)
     : 'Abstract not available.';
 
-  const types    = (raw.publicationTypes || []);
-  const typeLabel = types.length ? types[0] : 'Research Article';
-  const isOA     = Boolean(raw.openAccessPdf?.url);
-  const cites    = raw.citationCount ?? 0;
+  const typeLabel = (raw.publicationTypes || []).length
+    ? raw.publicationTypes[0] : 'Research Article';
 
-  return { title: raw.title || 'Untitled', authors, year: raw.year || '—',
-           abstract, url, typeLabel, isOA, cites };
+  return {
+    title:     raw.title || 'Untitled',
+    authors,
+    year:      raw.year || '—',
+    abstract,
+    url,
+    typeLabel,
+    isOA:      Boolean(raw.openAccessPdf?.url),
+    cites:     raw.citationCount ?? 0,
+    source:    'semanticscholar',
+  };
+}
+
+/* ── Normalised paper shape (both sources produce this) ───────────── */
+/*
+  {
+    title:     string
+    authors:   string   — "A, B, C et al." or "A, B"
+    year:      number | '—'
+    abstract:  string   — max 320 chars, truncated with …
+    url:       string   — DOI or source page
+    typeLabel: string   — "Journal Article", "Review Article", etc.
+    isOA:      boolean  — open access flag
+    cites:     number   — citation count
+    source:    'openalex' | 'semanticscholar'
+  }
+*/
+
+/* ── Hybrid fetch: try OpenAlex, fall back to Semantic Scholar ─────── */
+// pageOrOffset: page number (1-based) for OA, offset (0-based) for SS
+// We track which source is active in _ss.source so pagination is consistent.
+async function _fetchPapers(query, pageOrOffset) {
+  // If we already know OA failed this session, skip straight to SS
+  if (_ss.source === 'semanticscholar') {
+    return await _fetchSS(query, pageOrOffset);
+  }
+
+  try {
+    // OpenAlex: pageOrOffset is treated as 1-based page number
+    const page = pageOrOffset === 0 ? 1 : pageOrOffset;
+    const result = await _fetchOA(query, page);
+    _ss.source = 'openalex';
+    return result;
+  } catch (oaErr) {
+    console.warn('[NanoLit] OpenAlex failed, falling back to Semantic Scholar:',
+                 oaErr.message);
+    // Update spinner so user sees the source switch
+    const txt = document.querySelector('.search-loading-text');
+    if (txt) txt.textContent = 'OpenAlex unavailable — trying Semantic Scholar…';
+
+    // Semantic Scholar uses 0-based offset; pageOrOffset is already 0 on first call
+    const result = await _fetchSS(query, pageOrOffset);
+    _ss.source = 'semanticscholar';
+    return result;
+  }
 }
 
 /* ── Render one card ─────────────────────────── */
@@ -2239,6 +2347,12 @@ function _renderCard(p, i) {
   const citClass = p.cites > 200 ? 'amber' : '';
   const oaBadge  = p.isOA
     ? `<span class="tag teal" title="Open Access">⬡ OA</span>` : '';
+
+  // Source badge — uses .tag.src-openalex or .tag.src-s2
+  const srcBadge = p.source === 'openalex'
+    ? `<span class="tag src-openalex" title="Source: OpenAlex">⬡ OPENALEX</span>`
+    : `<span class="tag src-s2"       title="Source: Semantic Scholar">⬡ S2</span>`;
+
   return `
     <div class="glass-card result-card fade-in" style="transition-delay:${delay}s">
       <div class="result-type">${_esc(p.typeLabel)} · ${_esc(p.year)}</div>
@@ -2252,6 +2366,7 @@ function _renderCard(p, i) {
         <span class="tag violet">${_esc(String(p.year))}</span>
         <span class="tag ${citClass}" title="Citations">⊕ ${p.cites.toLocaleString()} cited</span>
         ${oaBadge}
+        ${srcBadge}
         <a href="${_esc(p.url)}" target="_blank" rel="noopener noreferrer"
            class="tag view-link" title="Open paper">↗ View Paper</a>
       </div>
@@ -2262,7 +2377,7 @@ function _renderCard(p, i) {
 function _renderLoading(attempt) {
   const label = attempt > 0
     ? `Retrying… (attempt ${attempt + 1} of ${SS_RETRIES + 1})`
-    : 'Querying Semantic Scholar across 200M+ papers…';
+    : 'Searching OpenAlex · 200M+ scholarly works…';
   return `<div class="search-loading">
     <div class="search-loading-ring"></div>
     <div class="search-loading-text">${label}</div>
@@ -2323,25 +2438,45 @@ function _updateMeta(shown, total, q) {
 /* ── MAIN: runSearch ─────────────────────────── */
 async function runSearch() {
   const input = document.getElementById('mainSearch');
+  const btn   = document.querySelector('.search-btn[onclick="runSearch()"]')
+             || document.querySelector('.search-btn');
   const q     = (input?.value || '').trim();
 
-  // Empty query → do nothing (no hidden default, no auto-run on load)
+  // 1. Require non-empty query — no auto-run, no hidden defaults
   if (!q) return;
 
-  // Cancel any in-flight fetch from a previous search so responses
-  // don't race each other and render out of order.
+  // 2. Block if a fetch is already in flight (prevents simultaneous requests)
+  if (_ss.loading) return;
+
+  // 3. Cooldown: enforce SS_COOLDOWN ms between searches to prevent API spam
+  const msSinceLast = Date.now() - _ss.lastSearchAt;
+  if (msSinceLast < SS_COOLDOWN) {
+    const wait = Math.ceil((SS_COOLDOWN - msSinceLast) / 1000);
+    const container = document.getElementById('searchResults');
+    container.innerHTML = `
+      <div class="search-state-msg" style="opacity:0.7">
+        <div class="search-state-icon" style="color:var(--accent-amber)">⏱</div>
+        <div class="search-state-title" style="font-size:0.95rem">Please wait ${wait}s</div>
+        <div class="search-state-desc">Cooldown prevents API rate limiting. Ready in ${wait} second${wait !== 1 ? 's' : ''}.</div>
+      </div>`;
+    return;
+  }
+
+  // 4. Cancel any lingering in-flight request (e.g. from a previous search
+  //    that somehow wasn't cleaned up) so responses don't race
   if (_ss.abortCtrl) {
     _ss.abortCtrl.abort();
     _ss.abortCtrl = null;
   }
 
-  // Prevent duplicate requests: same query already loading (mobile double-tap)
-  if (_ss.loading && _ss.query === q) return;
+  // 5. Disable the search button for the duration to prevent double-tap spam
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
   _ss.query   = q;
   _ss.offset  = 0;
   _ss.total   = 0;
   _ss.loading = true;
+  _ss.source  = null;   // reset so OA is tried fresh on every new query
   _updateMeta(0, 0, q);
 
   const container = document.getElementById('searchResults');
@@ -2350,8 +2485,7 @@ async function runSearch() {
   try {
     const { papers, total } = await _fetchPapers(q, 0);
 
-    // Stale-result guard: if the user started a new search while this
-    // one was in flight, discard this response.
+    // Stale-result guard: discard if a newer search replaced this one
     if (_ss.query !== q) return;
 
     _ss.total  = total;
@@ -2370,14 +2504,15 @@ async function runSearch() {
     if (typeof observeFadeIns === 'function') observeFadeIns();
 
   } catch (e) {
-    // Abort from our own cancellation (user started new search) — not a real error
     if (e.name === 'AbortError' && _ss.query !== q) return;
     console.error('[NanoLit Search] query:', q,
                   '| name:', e.name, '| message:', e.message);
     container.innerHTML = _renderError(e);
     _updateMeta(0, 0, q);
   } finally {
-    _ss.loading = false;
+    _ss.loading      = false;
+    _ss.lastSearchAt = Date.now();   // stamp time regardless of success/failure
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
   }
 }
 
@@ -2389,7 +2524,11 @@ async function loadMoreResults() {
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
 
   try {
-    const { papers } = await _fetchPapers(_ss.query, _ss.offset);
+    // OA uses 1-based pages; SS uses 0-based offset
+    const pageOrOffset = _ss.source === 'openalex'
+      ? Math.floor(_ss.offset / OA_PAGE_SIZE) + 1
+      : _ss.offset;
+    const { papers } = await _fetchPapers(_ss.query, pageOrOffset);
     const loadMoreRow = document.querySelector('.search-load-more');
     if (loadMoreRow) loadMoreRow.remove();
 
