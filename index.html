@@ -2117,15 +2117,16 @@ function renderAnalytics() {
 const SS_API       = 'https://api.semanticscholar.org/graph/v1/paper/search';
 const SS_FIELDS    = 'title,authors,year,abstract,citationCount,externalIds,openAccessPdf,publicationTypes';
 const SS_PAGE_SIZE = 9;
-const SS_TIMEOUT   = 12000;   // ms before a single attempt is aborted
+const SS_TIMEOUT   = 25000;   // ms — 25 s covers cold mobile TLS handshake
 const SS_RETRIES   = 2;       // auto-retry attempts on network failure
 
 /* ── State ───────────────────────────────────── */
 const _ss = {
-  query:   '',
-  offset:  0,
-  total:   0,
-  loading: false,
+  query:      '',      // last started query string
+  offset:     0,
+  total:      0,
+  loading:    false,
+  abortCtrl:  null,    // active AbortController — lets runSearch cancel in-flight fetches
 };
 
 /* ── XSS helper ──────────────────────────────── */
@@ -2152,10 +2153,14 @@ function _classifyError(err) {
   return                                      { code: 'unknown', retry: true  };
 }
 
-/* ── Single fetch attempt with AbortController timeout ── */
+/* ── Single fetch attempt ────────────────────────────────────────── */
 async function _fetchOnce(query, offset) {
-  const ctrl   = new AbortController();
-  const timer  = setTimeout(() => ctrl.abort(), SS_TIMEOUT);
+  // Assign to shared slot so runSearch() can abort this from outside
+  const ctrl = new AbortController();
+  _ss.abortCtrl = ctrl;
+
+  const timer = setTimeout(() => ctrl.abort(), SS_TIMEOUT);
+
   const params = new URLSearchParams({
     query,
     fields: SS_FIELDS,
@@ -2166,8 +2171,10 @@ async function _fetchOnce(query, offset) {
     const res = await fetch(`${SS_API}?${params}`, {
       method: 'GET',
       signal: ctrl.signal,
-      // No custom headers — some mobile proxies reject non-standard headers
-      // and Semantic Scholar's public endpoint works without them.
+      // cache:'no-store' bypasses mobile carrier / ISP proxy caches that
+      // can return a stale negative CORS pre-flight, making every fetch
+      // fail instantly with "Failed to fetch" even when the API is fine.
+      cache:  'no-store',
     });
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
@@ -2177,10 +2184,16 @@ async function _fetchOnce(query, offset) {
   }
 }
 
-/* ── Fetch with auto-retry + exponential back-off ── */
+/* ── Fetch with auto-retry ───────────────────────────────────────── */
 async function _fetchPapers(query, offset) {
   let lastErr;
   for (let attempt = 0; attempt <= SS_RETRIES; attempt++) {
+    // Keep spinner text updated so the user isn't staring at a frozen UI
+    if (attempt > 0) {
+      const txt = document.querySelector('.search-loading-text');
+      if (txt) txt.textContent =
+        `Retrying… (attempt ${attempt + 1} of ${SS_RETRIES + 1})`;
+    }
     try {
       return await _fetchOnce(query, offset);
     } catch (err) {
@@ -2188,8 +2201,9 @@ async function _fetchPapers(query, offset) {
       const { retry } = _classifyError(err);
       const isLast = attempt === SS_RETRIES;
       if (!retry || isLast) break;
-      // Back-off: 800 ms, 1600 ms …
-      await _sleep(800 * Math.pow(2, attempt));
+      // Linear back-off: 1 s then 2 s — long enough to recover, short
+      // enough that the user doesn't think the page has frozen.
+      await _sleep(1000 * (attempt + 1));
     }
   }
   throw lastErr;
@@ -2260,7 +2274,7 @@ function _renderError(err) {
   const { code } = _classifyError(err);
   const msgs = {
     offline:  'No internet connection detected. Please check your network and retry.',
-    timeout:  'The request timed out (>${SS_TIMEOUT / 1000}s). The API may be slow — please retry.',
+    timeout:  `The request timed out (${SS_TIMEOUT / 1000}s). The API may be slow — please retry.`,
     '429':    'Rate limit reached (100 req / 5 min on the free tier). Wait a moment then retry.',
     '5xx':    'Semantic Scholar servers returned an error. Usually resolves in seconds — please retry.',
     '4xx':    'The search request was malformed. Try a different query.',
@@ -2309,8 +2323,20 @@ function _updateMeta(shown, total, q) {
 /* ── MAIN: runSearch ─────────────────────────── */
 async function runSearch() {
   const input = document.getElementById('mainSearch');
-  const q     = (input?.value || '').trim() || 'graphene oxide nanoparticles';
-  if (_ss.loading) return;
+  const q     = (input?.value || '').trim();
+
+  // Empty query → do nothing (no hidden default, no auto-run on load)
+  if (!q) return;
+
+  // Cancel any in-flight fetch from a previous search so responses
+  // don't race each other and render out of order.
+  if (_ss.abortCtrl) {
+    _ss.abortCtrl.abort();
+    _ss.abortCtrl = null;
+  }
+
+  // Prevent duplicate requests: same query already loading (mobile double-tap)
+  if (_ss.loading && _ss.query === q) return;
 
   _ss.query   = q;
   _ss.offset  = 0;
@@ -2323,6 +2349,11 @@ async function runSearch() {
 
   try {
     const { papers, total } = await _fetchPapers(q, 0);
+
+    // Stale-result guard: if the user started a new search while this
+    // one was in flight, discard this response.
+    if (_ss.query !== q) return;
+
     _ss.total  = total;
     _ss.offset = papers.length;
 
@@ -2339,7 +2370,10 @@ async function runSearch() {
     if (typeof observeFadeIns === 'function') observeFadeIns();
 
   } catch (e) {
-    console.error('[NanoLit Search] query:', q, '| error name:', e.name, '| message:', e.message);
+    // Abort from our own cancellation (user started new search) — not a real error
+    if (e.name === 'AbortError' && _ss.query !== q) return;
+    console.error('[NanoLit Search] query:', q,
+                  '| name:', e.name, '| message:', e.message);
     container.innerHTML = _renderError(e);
     _updateMeta(0, 0, q);
   } finally {
@@ -2391,11 +2425,7 @@ function setSearch(elOrStr) {
   runSearch();
 }
 
-/* ── Enter-key shortcut ──────────────────────── */
-document.addEventListener('DOMContentLoaded', () => {
-  const inp = document.getElementById('mainSearch');
-  if (inp) inp.addEventListener('keydown', e => { if(e.key==='Enter') runSearch(); });
-});
+/* Enter-key handled by _wire('mainSearch') in the INIT block — no duplicate needed. */
 
 /* ─── AI PANEL ──────────────────────────────────── */
 const AI_RESPONSES = [
@@ -2489,7 +2519,17 @@ document.addEventListener('DOMContentLoaded', () => {
   _safe('timeline',   renderTimeline);
   _safe('analytics',  renderAnalytics);
   _safe('gaps',       analyzeGaps);
-  _safe('search',     runSearch);
+  // runSearch NOT called here — auto-running on load saturates mobile
+  // bandwidth during startup and causes the API timeout (Bug 1 root cause).
+  _safe('searchIdle', () => {
+    const c = document.getElementById('searchResults');
+    if (c) c.innerHTML = `
+      <div class="search-state-msg" style="opacity:0.55">
+        <div class="search-state-icon" style="color:var(--accent-cyan);filter:drop-shadow(0 0 10px rgba(0,220,255,0.3))">⊕</div>
+        <div class="search-state-title" style="font-size:0.95rem">Search 200M+ Papers</div>
+        <div class="search-state-desc">Enter a topic above and press Search Papers or hit Enter.</div>
+      </div>`;
+  });
 
   /* ── Hero counters ── */
   setTimeout(() => {
