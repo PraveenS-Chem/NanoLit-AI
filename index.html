@@ -984,7 +984,7 @@ footer {
   .footer-inner { grid-template-columns:1fr 1fr; }
   .papers-grid { grid-template-columns:1fr; }
   .search-results-grid { grid-template-columns:1fr; }
-  .ai-panel { display:none; }
+  /* ai-panel visible on mobile - converted to bottom sheet */
 }
 @media (max-width:600px) {
   .analytics-grid { grid-template-columns:1fr 1fr; }
@@ -992,6 +992,64 @@ footer {
   .hero-stats { flex-wrap:wrap; gap:1.2rem; }
   section { padding:80px 1rem 60px; }
   .navbar { padding:0 1rem; }
+}
+@media (max-width:768px) {
+  .ai-panel {
+    top: auto !important; bottom: 0 !important;
+    right: 0 !important; left: 0 !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.4s cubic-bezier(0.4,0,0.2,1) !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    border-radius: 18px 18px 0 0 !important;
+    z-index: 1100 !important;
+  }
+  .ai-panel.open { transform: translateY(0) !important; }
+  .ai-tab {
+    width: 100% !important; height: 48px !important;
+    border-radius: 18px 18px 0 0 !important;
+    border: 1px solid var(--border-glow) !important;
+    border-bottom: none !important;
+    writing-mode: horizontal-tb !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    padding: 0 1.2rem !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 0.08em !important;
+    position: relative !important;
+  }
+  .ai-tab::before {
+    content: '';
+    display: block; width: 36px; height: 4px;
+    background: var(--border-glow); border-radius: 2px;
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  }
+  .ai-panel-body {
+    width: 100% !important; max-height: 62vh !important;
+    border-radius: 0 !important;
+    border: 1px solid var(--border-glow) !important;
+    border-top: none !important; border-bottom: none !important;
+    padding: 1rem !important;
+  }
+  .ai-fab { display: flex !important; }
+  .ai-overlay.active { display: block !important; }
+}
+.ai-fab {
+  display: none;
+  position: fixed; bottom: 24px; right: 20px;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+  border: none; cursor: pointer;
+  align-items: center; justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: 0 4px 20px rgba(0,220,255,0.35);
+  z-index: 1200; transition: var(--transition);
+}
+.ai-fab:active { transform: scale(0.93); }
+.ai-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 1050;
+  backdrop-filter: blur(2px);
 }
 </style>
 </head>
@@ -1007,6 +1065,8 @@ footer {
 <canvas id="bg-canvas"></canvas>
 
 <!-- AI Assistant Panel -->
+<div class="ai-overlay" id="aiOverlay"></div>
+<button class="ai-fab" id="aiFab" aria-label="Open AI Assistant">🤖</button>
 <div class="ai-panel" id="aiPanel">
   <div class="ai-tab" id="aiTab">
     <span>⬡</span><span>AI ASSISTANT</span>
@@ -2157,9 +2217,7 @@ const _sleep = ms => new Promise(r => setTimeout(r, ms));
 function _classifyError(err) {
   const s = String(err.message || err);
   if (!navigator.onLine)            return { code: 'offline',  retry: false };
-  if (err.name === 'AbortError')    return { code: 'timeout',   retry: true  };
-  if (err.name === 'TypeError')        return { code: 'typeerror', retry: false };
-  if (err.name === 'SyntaxError')      return { code: 'syntax',    retry: false };
+  if (err.name === 'AbortError')    return { code: 'timeout',  retry: true  };
   // HTTP status codes embedded as "API NNN"
   if (/API 429/.test(s))            return { code: '429',      retry: false };
   if (/API 5\d\d/.test(s))          return { code: '5xx',      retry: true  };
@@ -2197,7 +2255,7 @@ async function _fetchOA(query, page) {
   });
   const data = await _timedFetch(`${OA_API}?${params}`, ctrl);
   return {
-    papers: (data.results || []).map(_normOA).filter(Boolean),
+    papers: (data.results || []).map(_normOA),
     total:  data.meta?.count || 0,
     source: 'openalex',
   };
@@ -2215,7 +2273,6 @@ function _invertedToAbstract(inv) {
 }
 
 function _normOA(raw) {
-  try {
   // Authors: authorships[].author.display_name
   const names = (raw.authorships || []).map(a => a.author?.display_name).filter(Boolean);
   const authors = names.length > 3
@@ -2251,9 +2308,8 @@ function _normOA(raw) {
     typeLabel,
     isOA,
     cites,
-    source:    'openalex',
+    source:    'openalex',   // source field on every normalised paper
   };
-  } catch(e) { console.warn('[NanoLit] _normOA bad record:', e.message); return null; }
 }
 
 /* ── SEMANTIC SCHOLAR (fallback) ──────────────────────────────────── */
@@ -2269,14 +2325,13 @@ async function _fetchSS(query, offset) {
   });
   const data = await _timedFetch(`${SS_API}?${params}`, ctrl);
   return {
-    papers: (data.data || []).map(_normSS).filter(Boolean),
+    papers: (data.data || []).map(_normSS),
     total:  data.total || 0,
     source: 'semanticscholar',
   };
 }
 
 function _normSS(raw) {
-  try {
   const names = (raw.authors || []).map(a => a.name);
   const authors = names.length > 3
     ? names.slice(0, 3).join(', ') + ' et al.'
@@ -2304,7 +2359,6 @@ function _normSS(raw) {
     cites:     raw.citationCount ?? 0,
     source:    'semanticscholar',
   };
-  } catch(e) { console.warn('[NanoLit] _normSS bad record:', e.message); return null; }
 }
 
 /* ── Normalised paper shape (both sources produce this) ───────────── */
@@ -2404,22 +2458,13 @@ function _renderError(err) {
     '5xx':    'Semantic Scholar servers returned an error. Usually resolves in seconds — please retry.',
     '4xx':    'The search request was malformed. Try a different query.',
     network:  'Network error reaching the API. If you\'re on GitHub Pages this should work — try refreshing.',
-    unknown:   'Unexpected error — see raw details below.',
-    typeerror: 'Data processing error — API returned unexpected format.',
-    syntax:    'API returned invalid JSON.',
+    unknown:  'An unexpected error occurred. Open DevTools → Console for details, then retry.',
   };
   const msg = msgs[code] || msgs.unknown;
-  const rawErr = _esc(err.name + ': ' + err.message);
   return `<div class="search-state-msg">
     <div class="search-state-icon">⚠</div>
     <div class="search-state-title">Search Failed</div>
     <div class="search-state-desc">${_esc(msg)}</div>
-    <div style="margin-top:0.6rem;font-family:var(--font-mono);font-size:0.68rem;
-                color:var(--accent-amber);background:rgba(245,158,11,0.06);
-                border:1px solid rgba(245,158,11,0.2);border-radius:6px;
-                padding:8px 12px;word-break:break-all;text-align:left;max-width:400px;">
-      ${rawErr}
-    </div>
     <button class="search-btn" style="margin-top:1rem;padding:10px 24px"
             onclick="runSearch()">Retry →</button>
   </div>`;
@@ -2585,30 +2630,144 @@ function setSearch(elOrStr) {
 
 /* Enter-key handled by _wire('mainSearch') in the INIT block — no duplicate needed. */
 
-/* ─── AI PANEL ──────────────────────────────────── */
-const AI_RESPONSES = [
-  "Based on 847K indexed papers, MXene Ti3C2Tx shows 23× growth in publication rate since 2019, with EMI shielding as the dominant application domain (34% of papers).",
-  "I found 12 underexplored research combinations involving graphene and MOF heterostructures. Would you like me to generate a detailed gap analysis report?",
-  "The conflicting cytotoxicity data for ZnO nanoparticles stems primarily from inconsistent reporting of particle size, coating, and exposure duration. I recommend filtering studies by ISO 10993 protocols.",
-  "Perovskite solar cells now have 347 published review articles but only 8 focus on lead-free formulations with >15% PCE — a high-novelty research window.",
-  "Quantum dot bioimaging for brain vasculature mapping has 0 published studies with NIR-III emitting InAs/ZnSe core-shells — confirmed novel area.",
-];
+/* ─── AI PANEL — OpenRouter + localStorage key persistence ──── */
 
-let aiResponseIdx = 0;
-/* aiSend / aiInput listeners moved into DOMContentLoaded — see INIT block */
+const OR_API        = 'https://openrouter.ai/api/v1/chat/completions';
+const OR_MODEL      = 'meta-llama/llama-3-8b-instruct:free';
+const OR_KEY_STORE  = 'nanolit_or_key';
 
-function sendAIMessage() {
-  const input = document.getElementById('aiInput');
-  const val = input.value.trim();
-  if (!val) return;
+const _aiHistory = [];
+const _aiSystem  = `You are NanoLit AI, an expert scientific assistant specialising in nanomaterials, nanotechnology, and materials science. Help researchers find papers, identify research gaps, analyse methodologies, and explain concepts. Keep responses under 120 words unless detail is explicitly requested. Plain text only.`;
+
+/* ── localStorage key helpers ──────────────────────────── */
+function aiLoadKey() {
+  try {
+    const saved = localStorage.getItem(OR_KEY_STORE);
+    if (!saved) return;
+    const inp   = document.getElementById('aiKeyInput');
+    const badge = document.getElementById('aiKeySaved');
+    if (inp)   inp.value = saved;
+    if (badge) badge.style.display = 'inline';
+  } catch(e) {}
+}
+
+function aiSaveKey() {
+  const inp = document.getElementById('aiKeyInput');
+  const key = (inp?.value || '').trim();
+  if (!key) { aiClearKey(); return; }
+  try {
+    localStorage.setItem(OR_KEY_STORE, key);
+    const badge = document.getElementById('aiKeySaved');
+    if (badge) { badge.style.display = 'inline'; badge.textContent = '✓ saved!'; }
+    setTimeout(() => {
+      const b = document.getElementById('aiKeySaved');
+      if (b) b.textContent = '✓ saved';
+    }, 1500);
+  } catch(e) { alert('Could not save — localStorage may be blocked in private mode.'); }
+}
+
+function aiClearKey() {
+  try { localStorage.removeItem(OR_KEY_STORE); } catch(e) {}
+  const inp   = document.getElementById('aiKeyInput');
+  const badge = document.getElementById('aiKeySaved');
+  if (inp)   inp.value = '';
+  if (badge) badge.style.display = 'none';
+}
+
+/* ── UI helpers ─────────────────────────────────────── */
+function _aiAppend(role, html) {
+  const msgs   = document.getElementById('aiMessages');
+  const isUser = role === 'user';
+  const div    = document.createElement('div');
+  div.className = 'ai-msg';
+  div.style.cssText = isUser
+    ? 'background:rgba(0,220,255,0.04);border-color:rgba(0,220,255,0.12);margin-bottom:0.5rem'
+    : 'margin-bottom:0.5rem';
+  div.innerHTML = `<strong style="color:${isUser ? 'var(--accent-cyan)' : 'var(--accent-violet)'};font-size:0.7rem">${isUser ? 'YOU' : 'NANOLIT AI'}</strong><br>${html}`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function _aiShowTyping() {
   const msgs = document.getElementById('aiMessages');
-  msgs.innerHTML += `<div class="ai-msg" style="background:rgba(0,220,255,0.04);border-color:rgba(0,220,255,0.12);margin-bottom:0.5rem"><strong style="color:var(--accent-cyan);font-size:0.7rem">YOU</strong><br>${val}</div>`;
+  const el   = document.createElement('div');
+  el.className = 'ai-typing'; el.id = 'aiTyping';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(el);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function _aiHideTyping() { document.getElementById('aiTyping')?.remove(); }
+function _aiSetBusy(b) {
+  const btn = document.getElementById('aiSend');
+  const inp = document.getElementById('aiInput');
+  if (btn) btn.disabled = b;
+  if (inp) inp.disabled = b;
+}
+
+/* ── Main send ────────────────────────────────────────── */
+async function sendAIMessage() {
+  const input  = document.getElementById('aiInput');
+  const keyInp = document.getElementById('aiKeyInput');
+  const msg    = (input?.value || '').trim();
+  if (!msg) return;
+
+  // Key: live field takes priority, then localStorage
+  let apiKey = (keyInp?.value || '').trim();
+  if (!apiKey) {
+    try { apiKey = localStorage.getItem(OR_KEY_STORE) || ''; } catch(e) {}
+  }
+
+  if (!apiKey) {
+    _aiAppend('assistant',
+      '⚠ Paste your free OpenRouter key above and click Save. ' +
+      'Get one free at <a href="https://openrouter.ai/keys" target="_blank" ' +
+      'rel="noopener" style="color:var(--accent-cyan)">openrouter.ai/keys</a> — no card needed.');
+    return;
+  }
+
   input.value = '';
-  setTimeout(() => {
-    msgs.innerHTML += `<div class="ai-msg" style="margin-bottom:0.5rem"><strong style="color:var(--accent-violet);font-size:0.7rem">NANOLIT AI</strong><br>${AI_RESPONSES[aiResponseIdx % AI_RESPONSES.length]}</div>`;
-    aiResponseIdx++;
-    msgs.scrollTop = msgs.scrollHeight;
-  }, 800);
+  _aiAppend('user', _esc(msg));
+  _aiSetBusy(true);
+  _aiShowTyping();
+  _aiHistory.push({ role: 'user', content: msg });
+
+  try {
+    const res = await fetch(OR_API, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer':  'https://nanolit-ai.github.io',
+        'X-Title':       'NanoLit AI',
+      },
+      body: JSON.stringify({
+        model:       OR_MODEL,
+        messages:    [{ role: 'system', content: _aiSystem }, ..._aiHistory.slice(-10)],
+        max_tokens:  300,
+        temperature: 0.7,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      if (res.status === 401) throw new Error('Invalid API key — check openrouter.ai/keys');
+      if (res.status === 429) throw new Error('Rate limit reached — wait a moment then retry');
+      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data  = await res.json();
+    const reply = data.choices?.[0]?.message?.content?.trim() || 'No response. Please retry.';
+    _aiHistory.push({ role: 'assistant', content: reply });
+    _aiHideTyping();
+    _aiAppend('assistant', _esc(reply).replace(/\n/g, '<br>'));
+
+  } catch(err) {
+    _aiHideTyping();
+    _aiAppend('assistant', '⚠ ' + _esc(err.message));
+    console.error('[NanoLit AI]', err);
+  } finally {
+    _aiSetBusy(false);
+  }
 }
 
 /* aiTab listener moved into DOMContentLoaded — see INIT block */
@@ -2662,15 +2821,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(id);
     if (el) el.addEventListener(evt, fn);
   };
-  _wire('aiSend',    'click',   sendAIMessage);
-  _wire('aiInput',   'keydown', e => { if (e.key === 'Enter') sendAIMessage(); });
-  _wire('aiTab',     'click',   () => document.getElementById('aiPanel')?.classList.toggle('open'));
-  _wire('hamburger', 'click',   () => document.getElementById('mobileMenu')?.classList.toggle('open'));
+  _wire('aiSend',  'click',   sendAIMessage);
+  _wire('aiInput', 'keydown', e => { if (e.key === 'Enter') sendAIMessage(); });
+  function _toggleAiPanel() {
+    const panel   = document.getElementById('aiPanel');
+    const overlay = document.getElementById('aiOverlay');
+    const isOpen  = panel?.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active', isOpen);
+    if (isOpen) setTimeout(() => document.getElementById('aiInput')?.focus(), 420);
+  }
+  _wire('aiTab',     'click', _toggleAiPanel);
+  _wire('aiFab',     'click', _toggleAiPanel);
+  _wire('aiOverlay', 'click', _toggleAiPanel);
+  _wire('hamburger', 'click', () => document.getElementById('mobileMenu')?.classList.toggle('open'));
   _wire('mainSearch','keydown', e => { if (e.key === 'Enter') runSearch(); });
 
   /* ── Renderers — each wrapped so one error can't kill the rest ── */
   const _safe = (label, fn) => { try { fn(); } catch(e) { console.warn('[NanoLit]', label, e); } };
 
+  _safe('aiKey',      aiLoadKey);
   _safe('canvas',     initCanvas);
   _safe('papers',     renderPapers);
   _safe('nanoList',   renderNanoList);
