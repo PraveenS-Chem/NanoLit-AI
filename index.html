@@ -1092,7 +1092,7 @@ footer {
         <button class="ai-key-btn ai-key-clear" onclick="aiClearKey()">Clear</button>
       </div>
     </div>
-    <div class="ai-model-badge">llama-3-8b-instruct:free · openrouter.ai</div>
+    <div class="ai-model-badge">llama-3.1-8b-instruct:free · openrouter.ai</div>
     <div class="ai-msg">Hello! I'm NanoLit AI. Paste your free OpenRouter key above, click Save, then ask me anything about nanoscience.</div>
     <div id="aiMessages"></div>
     <div class="ai-input-row">
@@ -2646,7 +2646,7 @@ function setSearch(elOrStr) {
 /* ─── AI PANEL — OpenRouter + localStorage key persistence ──── */
 
 const OR_API        = 'https://openrouter.ai/api/v1/chat/completions';
-const OR_MODEL      = 'meta-llama/llama-3-8b-instruct:free';
+const OR_MODEL      = 'meta-llama/llama-3.1-8b-instruct:free';
 const OR_KEY_STORE  = 'nanolit_or_key';
 
 const _aiHistory = [];
