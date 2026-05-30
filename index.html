@@ -2157,7 +2157,9 @@ const _sleep = ms => new Promise(r => setTimeout(r, ms));
 function _classifyError(err) {
   const s = String(err.message || err);
   if (!navigator.onLine)            return { code: 'offline',  retry: false };
-  if (err.name === 'AbortError')    return { code: 'timeout',  retry: true  };
+  if (err.name === 'AbortError')    return { code: 'timeout',   retry: true  };
+  if (err.name === 'TypeError')        return { code: 'typeerror', retry: false };
+  if (err.name === 'SyntaxError')      return { code: 'syntax',    retry: false };
   // HTTP status codes embedded as "API NNN"
   if (/API 429/.test(s))            return { code: '429',      retry: false };
   if (/API 5\d\d/.test(s))          return { code: '5xx',      retry: true  };
@@ -2168,12 +2170,12 @@ function _classifyError(err) {
 }
 
 /* ── Shared fetch helper (AbortController + timeout) ─────────────── */
-async function _timedFetch(url, options = {}) {
-  const ctrl  = new AbortController();
-  _ss.abortCtrl = ctrl;
+// Does NOT touch _ss.abortCtrl — callers assign it themselves so the
+// OA abort signal doesn't overwrite the SS one during fallback.
+async function _timedFetch(url, ctrl) {
   const timer = setTimeout(() => ctrl.abort(), SS_TIMEOUT);
   try {
-    const res = await fetch(url, { ...options, signal: ctrl.signal, cache: 'no-store' });
+    const res = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
     if (!res.ok) throw new Error(`API ${res.status}`);
     return await res.json();
   } finally {
@@ -2184,6 +2186,8 @@ async function _timedFetch(url, options = {}) {
 /* ── OPENALEX ─────────────────────────────────────────────────────── */
 // page is 1-based (OpenAlex uses page= not offset=)
 async function _fetchOA(query, page) {
+  const ctrl = new AbortController();
+  _ss.abortCtrl = ctrl;
   const params = new URLSearchParams({
     search:        query,
     'per-page':    OA_PAGE_SIZE,
@@ -2191,9 +2195,9 @@ async function _fetchOA(query, page) {
     select:        'id,title,authorships,publication_year,abstract_inverted_index,cited_by_count,doi,open_access,type',
     mailto:        'nanolit@github.io',   // OA best practice: polite pool
   });
-  const data = await _timedFetch(`${OA_API}?${params}`);
+  const data = await _timedFetch(`${OA_API}?${params}`, ctrl);
   return {
-    papers: (data.results || []).map(_normOA),
+    papers: (data.results || []).map(_normOA).filter(Boolean),
     total:  data.meta?.count || 0,
     source: 'openalex',
   };
@@ -2211,6 +2215,7 @@ function _invertedToAbstract(inv) {
 }
 
 function _normOA(raw) {
+  try {
   // Authors: authorships[].author.display_name
   const names = (raw.authorships || []).map(a => a.author?.display_name).filter(Boolean);
   const authors = names.length > 3
@@ -2238,7 +2243,7 @@ function _normOA(raw) {
   const year  = raw.publication_year || '—';
 
   return {
-    title:     raw.title || 'Untitled',
+    title:     (raw.title || raw.display_name || 'Untitled').trim(),
     authors,
     year,
     abstract,
@@ -2246,28 +2251,32 @@ function _normOA(raw) {
     typeLabel,
     isOA,
     cites,
-    source:    'openalex',   // source field on every normalised paper
+    source:    'openalex',
   };
+  } catch(e) { console.warn('[NanoLit] _normOA bad record:', e.message); return null; }
 }
 
 /* ── SEMANTIC SCHOLAR (fallback) ──────────────────────────────────── */
 // offset is 0-based (SS uses offset= not page=)
 async function _fetchSS(query, offset) {
+  const ctrl = new AbortController();
+  _ss.abortCtrl = ctrl;
   const params = new URLSearchParams({
     query,
     fields: SS_FIELDS,
     limit:  SS_PAGE_SIZE,
     offset,
   });
-  const data = await _timedFetch(`${SS_API}?${params}`);
+  const data = await _timedFetch(`${SS_API}?${params}`, ctrl);
   return {
-    papers: (data.data || []).map(_normSS),
+    papers: (data.data || []).map(_normSS).filter(Boolean),
     total:  data.total || 0,
     source: 'semanticscholar',
   };
 }
 
 function _normSS(raw) {
+  try {
   const names = (raw.authors || []).map(a => a.name);
   const authors = names.length > 3
     ? names.slice(0, 3).join(', ') + ' et al.'
@@ -2295,6 +2304,7 @@ function _normSS(raw) {
     cites:     raw.citationCount ?? 0,
     source:    'semanticscholar',
   };
+  } catch(e) { console.warn('[NanoLit] _normSS bad record:', e.message); return null; }
 }
 
 /* ── Normalised paper shape (both sources produce this) ───────────── */
@@ -2394,13 +2404,22 @@ function _renderError(err) {
     '5xx':    'Semantic Scholar servers returned an error. Usually resolves in seconds — please retry.',
     '4xx':    'The search request was malformed. Try a different query.',
     network:  'Network error reaching the API. If you\'re on GitHub Pages this should work — try refreshing.',
-    unknown:  'An unexpected error occurred. Open DevTools → Console for details, then retry.',
+    unknown:   'Unexpected error — see raw details below.',
+    typeerror: 'Data processing error — API returned unexpected format.',
+    syntax:    'API returned invalid JSON.',
   };
   const msg = msgs[code] || msgs.unknown;
+  const rawErr = _esc(err.name + ': ' + err.message);
   return `<div class="search-state-msg">
     <div class="search-state-icon">⚠</div>
     <div class="search-state-title">Search Failed</div>
     <div class="search-state-desc">${_esc(msg)}</div>
+    <div style="margin-top:0.6rem;font-family:var(--font-mono);font-size:0.68rem;
+                color:var(--accent-amber);background:rgba(245,158,11,0.06);
+                border:1px solid rgba(245,158,11,0.2);border-radius:6px;
+                padding:8px 12px;word-break:break-all;text-align:left;max-width:400px;">
+      ${rawErr}
+    </div>
     <button class="search-btn" style="margin-top:1rem;padding:10px 24px"
             onclick="runSearch()">Retry →</button>
   </div>`;
@@ -2497,7 +2516,7 @@ async function runSearch() {
       return;
     }
 
-    const cards = papers.map(_normPaper).map(_renderCard).join('');
+    const cards = papers.map(_renderCard).join('');  // papers already normalised by _normOA/_normSS
     container.innerHTML = cards;
     if (_ss.offset < total) container.innerHTML += _renderLoadMore(_ss.offset, total);
     _updateMeta(_ss.offset, total, q);
@@ -2534,7 +2553,7 @@ async function loadMoreResults() {
 
     const container = document.getElementById('searchResults');
     const startIdx = _ss.offset;
-    const html = papers.map(_normPaper).map((p,i) => _renderCard(p, startIdx+i)).join('');
+    const html = papers.map((p,i) => _renderCard(p, startIdx+i)).join('');  // papers already normalised
     container.insertAdjacentHTML('beforeend', html);
     _ss.offset += papers.length;
 
