@@ -1079,11 +1079,24 @@ footer {
         <div class="ai-panel-sub" style="color:var(--accent-teal)">● Online</div>
       </div>
     </div>
-    <div class="ai-msg">Hello! I'm your AI research assistant. Ask me about nanomaterials, research gaps, or paper analysis.</div>
-    <div class="ai-msg" style="background:rgba(139,92,246,0.06);border-color:rgba(139,92,246,0.15)">💡 Tip: Try asking "What are the latest applications of MXenes?"</div>
+    <!-- API Key input -->
+    <div class="ai-key-wrap">
+      <div class="ai-key-label-row">
+        <span class="ai-key-label">⚬ OPENROUTER API KEY</span>
+        <span class="ai-key-saved" id="aiKeySaved" style="display:none">✓ saved</span>
+      </div>
+      <div class="ai-key-row">
+        <input class="ai-key-input" id="aiKeyInput" type="password"
+               placeholder="sk-or-v1-... · free at openrouter.ai/keys" autocomplete="off" />
+        <button class="ai-key-btn ai-key-save" onclick="aiSaveKey()">Save</button>
+        <button class="ai-key-btn ai-key-clear" onclick="aiClearKey()">Clear</button>
+      </div>
+    </div>
+    <div class="ai-model-badge">llama-3-8b-instruct:free · openrouter.ai</div>
+    <div class="ai-msg">Hello! I'm NanoLit AI. Paste your free OpenRouter key above, click Save, then ask me anything about nanoscience.</div>
     <div id="aiMessages"></div>
     <div class="ai-input-row">
-      <input class="ai-input" id="aiInput" placeholder="Ask anything..." />
+      <input class="ai-input" id="aiInput" placeholder="Ask about nanomaterials, papers, gaps…" />
       <button class="ai-send" id="aiSend">➤</button>
     </div>
   </div>
