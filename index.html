@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NanoLit AI — Accelerate Scientific Discovery</title>
+<title>NanoLit — Accelerate Scientific Discovery</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@200;300;400;600;700;900&family=JetBrains+Mono:wght@300;400;500&family=Crimson+Pro:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
 <style>
@@ -853,204 +853,6 @@ section:first-of-type { padding-top: 0; }
 }
 .heat-cell:hover { transform:scale(1.2); }
 
-/* ═══════════════════════════════════════════════
-   AI ASSISTANT PANEL
-═══════════════════════════════════════════════ */
-.ai-panel {
-  position:fixed; right:0; top:50%;
-  transform:translateY(-50%) translateX(calc(100% - 44px));
-  z-index:900; transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
-  display:flex;
-}
-.ai-panel.open { transform:translateY(-50%) translateX(0); }
-.ai-tab {
-  width:44px; background:var(--bg-panel);
-  border:1px solid var(--border-glow);
-  border-right:none; border-radius:10px 0 0 10px;
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; transition:var(--transition);
-  writing-mode:vertical-rl;
-  font-size:0.72rem; font-family:var(--font-mono);
-  letter-spacing:0.1em; color:var(--accent-cyan);
-  gap:8px; padding:20px 0;
-  flex-shrink:0;
-}
-.ai-tab:hover { background:rgba(0,220,255,0.08); }
-.ai-panel-body {
-  width:300px; background:var(--bg-panel);
-  border:1px solid var(--border-glow);
-  border-right:none; border-radius:0;
-  padding:1.2rem; display:flex; flex-direction:column; gap:1rem;
-  max-height:500px; overflow-y:auto;
-}
-.ai-panel-header { display:flex; align-items:center; gap:10px; margin-bottom:0.5rem; }
-.ai-avatar {
-  width:32px; height:32px; border-radius:8px;
-  background:linear-gradient(135deg,var(--accent-cyan),var(--accent-violet));
-  display:flex; align-items:center; justify-content:center; font-size:0.8rem;
-  flex-shrink:0;
-}
-.ai-panel-title { font-size:0.85rem; font-weight:600; }
-.ai-panel-sub { font-size:0.7rem; color:var(--text-muted); }
-.ai-msg {
-  padding:10px 12px; border-radius:8px;
-  background:rgba(0,220,255,0.06); border:1px solid var(--border-glow);
-  font-size:0.8rem; color:var(--text-muted); line-height:1.5;
-}
-.ai-input-row { display:flex; gap:6px; }
-.ai-input {
-  flex:1; background:rgba(8,24,48,0.8); border:1px solid var(--border-glow);
-  border-radius:8px; color:var(--text-prime); font-size:0.8rem;
-  padding:8px 12px; outline:none; font-family:var(--font-display);
-}
-.ai-input:focus { border-color:var(--accent-cyan); }
-.ai-send {
-  width:34px; height:34px; border-radius:8px;
-  background:linear-gradient(135deg,var(--accent-cyan),#0088bb);
-  color:#000; border:none; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  transition:var(--transition); font-size:0.85rem;
-}
-
-/* ═══════════════════════════════════════════════
-   FOOTER
-═══════════════════════════════════════════════ */
-footer {
-  max-width:100%; margin:0; padding:3rem 2rem;
-  border-top:1px solid var(--border-glow);
-  background:rgba(2,4,8,0.9);
-}
-.footer-inner { max-width:1400px; margin:0 auto; display:grid; grid-template-columns:1.5fr repeat(3,1fr); gap:3rem; }
-.footer-brand p { font-size:0.83rem; color:var(--text-muted); line-height:1.6; margin-top:0.8rem; max-width:280px; }
-.footer-col h4 { font-size:0.78rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-prime); margin-bottom:1rem; }
-.footer-col a { display:block; font-size:0.82rem; color:var(--text-muted); text-decoration:none; margin-bottom:0.5rem; transition:var(--transition); }
-.footer-col a:hover { color:var(--accent-cyan); }
-.footer-bottom { max-width:1400px; margin:2rem auto 0; padding-top:1.5rem; border-top:1px solid var(--border-glow); display:flex; justify-content:space-between; align-items:center; }
-.footer-copy { font-size:0.75rem; color:var(--text-dim); font-family:var(--font-mono); }
-.api-badges { display:flex; gap:8px; flex-wrap:wrap; }
-.api-badge {
-  font-family:var(--font-mono); font-size:0.6rem; padding:3px 10px;
-  border-radius:4px; background:rgba(255,255,255,0.03);
-  border:1px solid var(--border-glow); color:var(--text-dim);
-  letter-spacing:0.1em;
-}
-
-/* ═══════════════════════════════════════════════
-   LOADING OVERLAY
-═══════════════════════════════════════════════ */
-.loading-overlay {
-  position:fixed; inset:0; z-index:9999;
-  background:var(--bg-void);
-  display:flex; align-items:center; justify-content:center;
-  flex-direction:column; gap:1rem;
-  transition:opacity 0.6s ease;
-}
-.loading-overlay.hidden { opacity:0; pointer-events:none; }
-.loading-spinner {
-  width:60px; height:60px; border-radius:50%;
-  border:2px solid var(--border-glow);
-  border-top-color:var(--accent-cyan);
-  animation:spin 0.8s linear infinite;
-}
-@keyframes spin { to{transform:rotate(360deg)} }
-.loading-text { font-family:var(--font-mono); font-size:0.8rem; color:var(--text-dim); letter-spacing:0.15em; }
-
-/* ═══════════════════════════════════════════════
-   UTILITY & ANIMATIONS
-═══════════════════════════════════════════════ */
-.fade-in { opacity:0; transform:translateY(20px); transition:opacity 0.7s ease, transform 0.7s ease; }
-.fade-in.visible { opacity:1; transform:translateY(0); }
-.divider {
-  width:100%; height:1px;
-  background:linear-gradient(90deg,transparent,var(--border-glow),transparent);
-  margin: 2rem 0;
-}
-.flex-center { display:flex; align-items:center; justify-content:center; }
-.gap-8 { gap:8px; }
-@media (max-width:900px) {
-  .hero-grid { grid-template-columns:1fr; }
-  .hero-visual { display:none; }
-  .gap-grid { grid-template-columns:1fr; }
-  .nano-layout { grid-template-columns:1fr; }
-  .eval-layout { grid-template-columns:1fr; }
-  .simplifier-layout { grid-template-columns:1fr; }
-  .analytics-grid { grid-template-columns:repeat(2,1fr); }
-  .analytics-row { grid-template-columns:1fr; }
-  .timeline-line { left:20px; transform:none; }
-  .timeline-item { grid-template-columns:0 30px 1fr !important; }
-  .tl-empty { display:none; }
-  .timeline-item:nth-child(odd) .tl-content { text-align:left; padding-left:1.5rem; padding-right:0; }
-  .timeline-item:nth-child(even) .tl-content { padding-left:1.5rem; }
-  .footer-inner { grid-template-columns:1fr 1fr; }
-  .papers-grid { grid-template-columns:1fr; }
-  .search-results-grid { grid-template-columns:1fr; }
-  /* ai-panel visible on mobile - converted to bottom sheet */
-}
-@media (max-width:600px) {
-  .analytics-grid { grid-template-columns:1fr 1fr; }
-  .footer-inner { grid-template-columns:1fr; }
-  .hero-stats { flex-wrap:wrap; gap:1.2rem; }
-  section { padding:80px 1rem 60px; }
-  .navbar { padding:0 1rem; }
-}
-@media (max-width:768px) {
-  .ai-panel {
-    top: auto !important; bottom: 0 !important;
-    right: 0 !important; left: 0 !important;
-    transform: translateY(100%) !important;
-    transition: transform 0.4s cubic-bezier(0.4,0,0.2,1) !important;
-    flex-direction: column !important;
-    width: 100% !important;
-    border-radius: 18px 18px 0 0 !important;
-    z-index: 1100 !important;
-  }
-  .ai-panel.open { transform: translateY(0) !important; }
-  .ai-tab {
-    width: 100% !important; height: 48px !important;
-    border-radius: 18px 18px 0 0 !important;
-    border: 1px solid var(--border-glow) !important;
-    border-bottom: none !important;
-    writing-mode: horizontal-tb !important;
-    flex-direction: row !important;
-    justify-content: center !important;
-    padding: 0 1.2rem !important;
-    font-size: 0.75rem !important;
-    letter-spacing: 0.08em !important;
-    position: relative !important;
-  }
-  .ai-tab::before {
-    content: '';
-    display: block; width: 36px; height: 4px;
-    background: var(--border-glow); border-radius: 2px;
-    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
-  }
-  .ai-panel-body {
-    width: 100% !important; max-height: 62vh !important;
-    border-radius: 0 !important;
-    border: 1px solid var(--border-glow) !important;
-    border-top: none !important; border-bottom: none !important;
-    padding: 1rem !important;
-  }
-  .ai-fab { display: flex !important; }
-  .ai-overlay.active { display: block !important; }
-}
-.ai-fab {
-  display: none;
-  position: fixed; bottom: 24px; right: 20px;
-  width: 52px; height: 52px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
-  border: none; cursor: pointer;
-  align-items: center; justify-content: center;
-  font-size: 1.3rem;
-  box-shadow: 0 4px 20px rgba(0,220,255,0.35);
-  z-index: 1200; transition: var(--transition);
-}
-.ai-fab:active { transform: scale(0.93); }
-.ai-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.55); z-index: 1050;
-  backdrop-filter: blur(2px);
-}
 </style>
 </head>
 <body>
@@ -1058,55 +860,18 @@ footer {
 <!-- Loading Overlay -->
 <div class="loading-overlay" id="loading">
   <div class="loading-spinner"></div>
-  <div class="loading-text">INITIALIZING NANOLIT AI...</div>
+  <div class="loading-text">INITIALIZING NANOLIT...</div>
 </div>
 
 <!-- Animated Background Canvas -->
 <canvas id="bg-canvas"></canvas>
 
-<!-- AI Assistant Panel -->
-<div class="ai-overlay" id="aiOverlay"></div>
-<button class="ai-fab" id="aiFab" aria-label="Open AI Assistant">🤖</button>
-<div class="ai-panel" id="aiPanel">
-  <div class="ai-tab" id="aiTab">
-    <span>⬡</span><span>AI ASSISTANT</span>
-  </div>
-  <div class="ai-panel-body">
-    <div class="ai-panel-header">
-      <div class="ai-avatar">⬡</div>
-      <div>
-        <div class="ai-panel-title">NanoLit Assistant</div>
-        <div class="ai-panel-sub" style="color:var(--accent-teal)">● Online</div>
-      </div>
-    </div>
-    <!-- API Key input -->
-    <div class="ai-key-wrap">
-      <div class="ai-key-label-row">
-        <span class="ai-key-label">⚬ OPENROUTER API KEY</span>
-        <span class="ai-key-saved" id="aiKeySaved" style="display:none">✓ saved</span>
-      </div>
-      <div class="ai-key-row">
-        <input class="ai-key-input" id="aiKeyInput" type="password"
-               placeholder="sk-or-v1-... · free at openrouter.ai/keys" autocomplete="off" />
-        <button class="ai-key-btn ai-key-save" onclick="aiSaveKey()">Save</button>
-        <button class="ai-key-btn ai-key-clear" onclick="aiClearKey()">Clear</button>
-      </div>
-    </div>
-    <div class="ai-model-badge">llama-3.1-8b-instruct:free · openrouter.ai</div>
-    <div class="ai-msg">Hello! I'm NanoLit AI. Paste your free OpenRouter key above, click Save, then ask me anything about nanoscience.</div>
-    <div id="aiMessages"></div>
-    <div class="ai-input-row">
-      <input class="ai-input" id="aiInput" placeholder="Ask about nanomaterials, papers, gaps…" />
-      <button class="ai-send" id="aiSend">➤</button>
-    </div>
-  </div>
-</div>
 
 <!-- Navbar -->
 <nav class="navbar" id="navbar">
   <a href="#hero" class="nav-brand">
     <div class="nav-brand-icon">⬡</div>
-    <span class="nav-brand-text">Nano<span>Lit</span> AI</span>
+    <span class="nav-brand-text">Nano<span>Lit</span></span>
   </a>
   <ul class="nav-links">
     <li><a href="#search" class="nav-link">Search</a></li>
@@ -1117,7 +882,6 @@ footer {
     <li><a href="#analytics" class="nav-link">Analytics</a></li>
   </ul>
   <div class="nav-cta">
-    <button class="btn btn-outline" onclick="document.getElementById('aiPanel').classList.toggle('open')">AI Chat</button>
     <button class="btn btn-primary">Get Started</button>
   </div>
   <div class="hamburger" id="hamburger">
@@ -1149,7 +913,7 @@ footer {
         <span class="line3">with AI Intelligence</span>
       </h1>
       <p class="hero-desc">
-        NanoLit AI synthesizes thousands of research papers, identifies unexplored gaps, and generates actionable insights — empowering chemists and materials scientists to move faster than ever.
+        NanoLit synthesizes thousands of research papers, identifies unexplored gaps, and generates actionable insights — empowering chemists and materials scientists to move faster than ever.
       </p>
       <div class="hero-actions">
         <button class="btn-hero-primary" onclick="document.getElementById('search').scrollIntoView({behavior:'smooth'})">
@@ -1442,7 +1206,7 @@ footer {
     <div class="footer-brand">
       <div class="nav-brand" style="display:flex;gap:10px;align-items:center;margin-bottom:0.5rem">
         <div class="nav-brand-icon" style="width:30px;height:30px;font-size:14px">⬡</div>
-        <span class="nav-brand-text" style="font-size:1.1rem">NanoLit AI</span>
+        <span class="nav-brand-text" style="font-size:1.1rem">NanoLit</span>
       </div>
       <p>AI-powered literature survey platform for chemistry, nanomaterials, materials science, and cheminformatics research.</p>
     </div>
@@ -1472,7 +1236,7 @@ footer {
     </div>
   </div>
   <div class="footer-bottom">
-    <div class="footer-copy">© 2025 NanoLit AI — Built for the scientific community</div>
+    <div class="footer-copy">© 2025 NanoLit — Built for the scientific community</div>
     <div class="api-badges">
       <span class="api-badge">CLAUDE API</span>
       <span class="api-badge">PUBCHEM</span>
@@ -2643,148 +2407,6 @@ function setSearch(elOrStr) {
 
 /* Enter-key handled by _wire('mainSearch') in the INIT block — no duplicate needed. */
 
-/* ─── AI PANEL — OpenRouter + localStorage key persistence ──── */
-
-const OR_API        = 'https://openrouter.ai/api/v1/chat/completions';
-const OR_MODEL      = 'meta-llama/llama-3.1-8b-instruct:free';
-const OR_KEY_STORE  = 'nanolit_or_key';
-
-const _aiHistory = [];
-const _aiSystem  = `You are NanoLit AI, an expert scientific assistant specialising in nanomaterials, nanotechnology, and materials science. Help researchers find papers, identify research gaps, analyse methodologies, and explain concepts. Keep responses under 120 words unless detail is explicitly requested. Plain text only.`;
-
-/* ── localStorage key helpers ──────────────────────────── */
-function aiLoadKey() {
-  try {
-    const saved = localStorage.getItem(OR_KEY_STORE);
-    if (!saved) return;
-    const inp   = document.getElementById('aiKeyInput');
-    const badge = document.getElementById('aiKeySaved');
-    if (inp)   inp.value = saved;
-    if (badge) badge.style.display = 'inline';
-  } catch(e) {}
-}
-
-function aiSaveKey() {
-  const inp = document.getElementById('aiKeyInput');
-  const key = (inp?.value || '').trim();
-  if (!key) { aiClearKey(); return; }
-  try {
-    localStorage.setItem(OR_KEY_STORE, key);
-    const badge = document.getElementById('aiKeySaved');
-    if (badge) { badge.style.display = 'inline'; badge.textContent = '✓ saved!'; }
-    setTimeout(() => {
-      const b = document.getElementById('aiKeySaved');
-      if (b) b.textContent = '✓ saved';
-    }, 1500);
-  } catch(e) { alert('Could not save — localStorage may be blocked in private mode.'); }
-}
-
-function aiClearKey() {
-  try { localStorage.removeItem(OR_KEY_STORE); } catch(e) {}
-  const inp   = document.getElementById('aiKeyInput');
-  const badge = document.getElementById('aiKeySaved');
-  if (inp)   inp.value = '';
-  if (badge) badge.style.display = 'none';
-}
-
-/* ── UI helpers ─────────────────────────────────────── */
-function _aiAppend(role, html) {
-  const msgs   = document.getElementById('aiMessages');
-  const isUser = role === 'user';
-  const div    = document.createElement('div');
-  div.className = 'ai-msg';
-  div.style.cssText = isUser
-    ? 'background:rgba(0,220,255,0.04);border-color:rgba(0,220,255,0.12);margin-bottom:0.5rem'
-    : 'margin-bottom:0.5rem';
-  div.innerHTML = `<strong style="color:${isUser ? 'var(--accent-cyan)' : 'var(--accent-violet)'};font-size:0.7rem">${isUser ? 'YOU' : 'NANOLIT AI'}</strong><br>${html}`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function _aiShowTyping() {
-  const msgs = document.getElementById('aiMessages');
-  const el   = document.createElement('div');
-  el.className = 'ai-typing'; el.id = 'aiTyping';
-  el.innerHTML = '<span></span><span></span><span></span>';
-  msgs.appendChild(el);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-function _aiHideTyping() { document.getElementById('aiTyping')?.remove(); }
-function _aiSetBusy(b) {
-  const btn = document.getElementById('aiSend');
-  const inp = document.getElementById('aiInput');
-  if (btn) btn.disabled = b;
-  if (inp) inp.disabled = b;
-}
-
-/* ── Main send ────────────────────────────────────────── */
-async function sendAIMessage() {
-  const input  = document.getElementById('aiInput');
-  const keyInp = document.getElementById('aiKeyInput');
-  const msg    = (input?.value || '').trim();
-  if (!msg) return;
-
-  // Key: live field takes priority, then localStorage
-  let apiKey = (keyInp?.value || '').trim();
-  if (!apiKey) {
-    try { apiKey = localStorage.getItem(OR_KEY_STORE) || ''; } catch(e) {}
-  }
-
-  if (!apiKey) {
-    _aiAppend('assistant',
-      '⚠ Paste your free OpenRouter key above and click Save. ' +
-      'Get one free at <a href="https://openrouter.ai/keys" target="_blank" ' +
-      'rel="noopener" style="color:var(--accent-cyan)">openrouter.ai/keys</a> — no card needed.');
-    return;
-  }
-
-  input.value = '';
-  _aiAppend('user', _esc(msg));
-  _aiSetBusy(true);
-  _aiShowTyping();
-  _aiHistory.push({ role: 'user', content: msg });
-
-  try {
-    const res = await fetch(OR_API, {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer':  'https://nanolit-ai.github.io',
-        'X-Title':       'NanoLit AI',
-      },
-      body: JSON.stringify({
-        model:       OR_MODEL,
-        messages:    [{ role: 'system', content: _aiSystem }, ..._aiHistory.slice(-10)],
-        max_tokens:  300,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      if (res.status === 401) throw new Error('Invalid API key — check openrouter.ai/keys');
-      if (res.status === 429) throw new Error('Rate limit reached — wait a moment then retry');
-      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
-    }
-
-    const data  = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim() || 'No response. Please retry.';
-    _aiHistory.push({ role: 'assistant', content: reply });
-    _aiHideTyping();
-    _aiAppend('assistant', _esc(reply).replace(/\n/g, '<br>'));
-
-  } catch(err) {
-    _aiHideTyping();
-    _aiAppend('assistant', '⚠ ' + _esc(err.message));
-    console.error('[NanoLit AI]', err);
-  } finally {
-    _aiSetBusy(false);
-  }
-}
-
-/* aiTab listener moved into DOMContentLoaded — see INIT block */
-
 /* ─── NAVBAR ─────────────────────────────────────── */
 window.addEventListener('scroll', () => {
   const nav = document.getElementById('navbar');
@@ -2834,25 +2456,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(id);
     if (el) el.addEventListener(evt, fn);
   };
-  _wire('aiSend',  'click',   sendAIMessage);
-  _wire('aiInput', 'keydown', e => { if (e.key === 'Enter') sendAIMessage(); });
-  function _toggleAiPanel() {
-    const panel   = document.getElementById('aiPanel');
-    const overlay = document.getElementById('aiOverlay');
-    const isOpen  = panel?.classList.toggle('open');
-    if (overlay) overlay.classList.toggle('active', isOpen);
-    if (isOpen) setTimeout(() => document.getElementById('aiInput')?.focus(), 420);
-  }
-  _wire('aiTab',     'click', _toggleAiPanel);
-  _wire('aiFab',     'click', _toggleAiPanel);
-  _wire('aiOverlay', 'click', _toggleAiPanel);
   _wire('hamburger', 'click', () => document.getElementById('mobileMenu')?.classList.toggle('open'));
   _wire('mainSearch','keydown', e => { if (e.key === 'Enter') runSearch(); });
 
   /* ── Renderers — each wrapped so one error can't kill the rest ── */
   const _safe = (label, fn) => { try { fn(); } catch(e) { console.warn('[NanoLit]', label, e); } };
 
-  _safe('aiKey',      aiLoadKey);
   _safe('canvas',     initCanvas);
   _safe('papers',     renderPapers);
   _safe('nanoList',   renderNanoList);
