@@ -1052,69 +1052,75 @@ footer {
   backdrop-filter: blur(2px);
 }
 
-/* ── Hero stat source annotation ── */
-.hero-stat-source {
-  display: block;
+/* ═══════════════════════════════════════════════
+   COMING SOON STATE — used by all unimplemented features
+   Replaces all deceptive fake outputs with honest UI.
+═══════════════════════════════════════════════ */
+.coming-soon-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3.5rem 2rem;
+  gap: 1.2rem;
+  min-height: 220px;
+}
+.coming-soon-icon {
+  font-size: 2.2rem;
+  opacity: 0.4;
+  line-height: 1;
+}
+.coming-soon-label {
   font-family: var(--font-mono);
-  font-size: 0.58rem;
-  color: var(--text-dim);
-  letter-spacing: 0.06em;
-  margin-top: 2px;
-  opacity: 0.7;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  border: 1px solid rgba(245,158,11,0.25);
+  background: rgba(245,158,11,0.06);
+  padding: 4px 14px;
+  border-radius: 20px;
 }
-
-/* ── Mode button sub-label ── */
-.mode-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 16px; }
-.mode-btn-sub {
-  font-size: 0.58rem; font-family: var(--font-mono);
-  color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase;
-  font-weight: 400; transition: var(--transition);
+.coming-soon-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-prime);
+  margin: 0;
+}
+.coming-soon-desc {
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  max-width: 480px;
+  line-height: 1.65;
+}
+/* Inline badge for sections that show content alongside a coming-soon notice */
+.dev-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: var(--accent-amber);
+  border: 1px solid rgba(245,158,11,0.2);
+  background: rgba(245,158,11,0.05);
+  padding: 5px 14px;
+  border-radius: 6px;
+  margin-bottom: 1.2rem;
+}
+.dev-notice::before {
+  content: '⚠';
+}
+/* Dimmed stat — makes hero counters visually distinct as estimates */
+.stat-estimate-note {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
   display: block;
 }
-.mode-btn.active .mode-btn-sub { color: rgba(0,220,255,0.6); }
-
-/* ── Nav demo badge ── */
-.nav-demo-badge {
-  font-family: var(--font-mono); font-size: 0.62rem;
-  color: var(--text-dim); letter-spacing: 0.08em;
-  border: 1px solid var(--border-glow);
-  padding: 4px 10px; border-radius: 20px;
-  display: flex; align-items: center; gap: 6px;
-  cursor: default;
-  background: rgba(255,255,255,0.02);
-}
-.nav-demo-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--accent-teal);
-  box-shadow: 0 0 6px rgba(0,255,200,0.6);
-  flex-shrink: 0;
-  animation: demoPulse 2s ease-in-out infinite;
-}
-@keyframes demoPulse {
-  0%,100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-@media (max-width: 1100px) { .nav-demo-badge { display: none; } }
-
-/* ── Demo notice bar ── */
-.demo-notice {
-  display: flex; align-items: flex-start; gap: 10px;
-  background: rgba(245,158,11,0.05);
-  border: 1px solid rgba(245,158,11,0.2);
-  border-radius: 10px; padding: 12px 16px;
-  margin-bottom: 1.5rem;
-  font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;
-}
-.demo-notice-icon {
-  color: var(--accent-amber); flex-shrink: 0; font-size: 0.9rem; margin-top: 1px;
-}
-.demo-notice-close {
-  margin-left: auto; background: none; border: none;
-  color: var(--text-dim); cursor: pointer; flex-shrink: 0;
-  font-size: 0.75rem; padding: 0 2px; line-height: 1;
-  transition: var(--transition);
-}
-.demo-notice-close:hover { color: var(--text-muted); }
 </style>
 </head>
 <body>
@@ -1143,21 +1149,55 @@ footer {
         <div class="ai-panel-sub" style="color:var(--accent-teal)">● Online</div>
       </div>
     </div>
-    <!-- API Key input -->
-    <div class="ai-key-wrap">
+    <!-- API Key — two states:
+         #aiKeyEntry  = input form (shown when no key saved)
+         #aiKeyLocked = compact locked pill (shown after key is saved)
+         JS toggles between them via aiSaveKey() / aiClearKey() / aiLoadKey() -->
+
+    <!-- STATE A: entry form (visible when no key is saved) -->
+    <div id="aiKeyEntry">
       <div class="ai-key-label-row">
-        <span class="ai-key-label">⚬ OPENROUTER API KEY</span>
-        <span class="ai-key-saved" id="aiKeySaved" style="display:none">✓ saved</span>
+        <span class="ai-key-label">⚬ GROQ API KEY</span>
+        <a href="https://console.groq.com/keys" target="_blank" rel="noopener"
+           style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-cyan);text-decoration:none;margin-left:auto">
+          Get free key ↗
+        </a>
       </div>
       <div class="ai-key-row">
         <input class="ai-key-input" id="aiKeyInput" type="password"
-               placeholder="sk-or-v1-... · free at openrouter.ai/keys" autocomplete="off" />
+               placeholder="gsk_... paste here" autocomplete="off" />
         <button class="ai-key-btn ai-key-save" onclick="aiSaveKey()">Save</button>
-        <button class="ai-key-btn ai-key-clear" onclick="aiClearKey()">Clear</button>
       </div>
     </div>
-    <div class="ai-model-badge">llama-3.1-8b-instruct:free · openrouter.ai</div>
-    <div class="ai-msg">Hello! I'm NanoLit AI. Paste your free OpenRouter key above, click Save, then ask me anything about nanoscience.</div>
+
+    <!-- STATE B: locked pill (hidden until key is saved) -->
+    <div id="aiKeyLocked" style="display:none;align-items:center;gap:8px;
+         padding:7px 12px;border-radius:8px;
+         background:rgba(0,255,200,0.06);border:1px solid rgba(0,255,200,0.18);">
+      <span style="color:var(--accent-teal);font-size:0.8rem">✓</span>
+      <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--accent-teal);letter-spacing:0.08em">
+        GROQ KEY SAVED
+      </span>
+      <button onclick="aiEditKey()" style="margin-left:auto;background:transparent;
+              border:1px solid var(--border-glow);border-radius:5px;
+              color:var(--text-muted);font-family:var(--font-mono);font-size:0.6rem;
+              padding:3px 9px;cursor:pointer;transition:var(--transition)"
+              onmouseover="this.style.color='var(--accent-cyan)';this.style.borderColor='var(--accent-cyan)'"
+              onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-glow)'">
+        Edit
+      </button>
+      <button onclick="aiClearKey()" style="background:transparent;
+              border:1px solid var(--border-glow);border-radius:5px;
+              color:var(--text-muted);font-family:var(--font-mono);font-size:0.6rem;
+              padding:3px 9px;cursor:pointer;transition:var(--transition)"
+              onmouseover="this.style.color='var(--accent-rose)';this.style.borderColor='var(--accent-rose)'"
+              onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-glow)'">
+        Remove
+      </button>
+    </div>
+
+    <div class="ai-model-badge">llama-3.3-70b-versatile · groq.com · free tier</div>
+    <div class="ai-msg" id="aiWelcomeMsg">Hello! I'm NanoLit AI. Paste your free Groq API key above (no card needed — get one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener" style="color:var(--accent-cyan)">console.groq.com/keys</a>), click Save, then ask me anything about nanoscience.</div>
     <div id="aiMessages"></div>
     <div class="ai-input-row">
       <input class="ai-input" id="aiInput" placeholder="Ask about nanomaterials, papers, gaps…" />
@@ -1181,10 +1221,8 @@ footer {
     <li><a href="#analytics" class="nav-link">Analytics</a></li>
   </ul>
   <div class="nav-cta">
-    <span class="nav-demo-badge" title="Search is live. Paper cards, gap analysis, idea evaluator, and simplifier use curated demo data.">
-      <span class="nav-demo-dot"></span>Search Live · Demo Data
-    </span>
     <button class="btn btn-outline" onclick="document.getElementById('aiPanel').classList.toggle('open')">AI Chat</button>
+    <button class="btn btn-primary">Get Started</button>
   </div>
   <div class="hamburger" id="hamburger">
     <span></span><span></span><span></span>
@@ -1229,17 +1267,19 @@ footer {
         <div class="hero-stat">
           <span class="hero-stat-num" id="stat1">0</span>
           <span class="hero-stat-label">Papers Indexed</span>
-          <span class="hero-stat-source">via OpenAlex</span>
+          <!-- NOTE: These figures are sourced from OpenAlex's public count, not live platform metrics -->
+          <span class="stat-estimate-note">via OpenAlex</span>
         </div>
         <div class="hero-stat">
           <span class="hero-stat-num" id="stat2">0</span>
-          <span class="hero-stat-label">Nano Journals</span>
-          <span class="hero-stat-source">Web of Science</span>
+          <span class="hero-stat-label">Nanomaterials</span>
+          <span class="stat-estimate-note">est. OpenAlex</span>
         </div>
         <div class="hero-stat">
           <span class="hero-stat-num" id="stat3">0</span>
-          <span class="hero-stat-label">Nano Papers (2024)</span>
-          <span class="hero-stat-source">Semantic Scholar est.</span>
+          <span class="hero-stat-label">Research Gaps</span>
+          <!-- NOTE: "Research Gaps" counter is a rough estimate — not computed by real analysis -->
+          <span class="stat-estimate-note">est. figure</span>
         </div>
       </div>
     </div>
@@ -1323,9 +1363,9 @@ footer {
 
 <!-- ═══════════ SEARCH ═══════════ -->
 <section id="search">
-  <div class="section-badge">Live API · OpenAlex + Semantic Scholar</div>
+  <div class="section-badge">Feature 01</div>
   <h2 class="section-title">AI <span class="highlight">Literature Search</span></h2>
-  <p class="section-sub">Search 250M+ real indexed works via OpenAlex (primary) and Semantic Scholar (fallback). Results are live — not cached or simulated.</p>
+  <p class="section-sub">Query across millions of indexed research papers. Our semantic search engine understands scientific context, not just keywords.</p>
   <div class="search-container fade-in">
     <div class="search-box">
       <div class="search-input-wrap">
@@ -1347,7 +1387,9 @@ footer {
     </div>
     <div class="search-results-grid" id="searchResults"></div>
     <div class="trending-section">
-      <div class="trending-label">Trending Topics</div>
+      <!-- NOTE: Trending Topics are hardcoded — not computed from real publication data.
+           BACKEND REQUIRED: Replace with API call to fetch genuinely trending nanomaterials topics. -->
+      <div class="trending-label">Suggested Topics <span style="font-size:0.65rem;color:var(--accent-amber);font-family:var(--font-mono);margin-left:8px">· curated, not live</span></div>
       <div class="trending-chips">
         <div class="trending-chip" onclick="setSearch('MXene Supercapacitors')"><span class="trend-arrow">↑</span> MXene Supercapacitors</div>
         <div class="trending-chip" onclick="setSearch('CRISPR nanodelivery')"><span class="trend-arrow">↑</span> CRISPR Nanodelivery</div>
@@ -1363,20 +1405,18 @@ footer {
 
 <!-- ═══════════ PAPERS ═══════════ -->
 <section id="papers">
-  <div class="section-badge">Demo · Curated Papers</div>
+  <div class="section-badge">Feature 02</div>
   <h2 class="section-title">Paper <span class="highlight">Summary Engine</span></h2>
   <p class="section-sub">AI-distilled summaries with structured extraction of methods, findings, applications, and limitations — in seconds.</p>
-  <div class="demo-notice" id="papersDemoNotice">
-    <span class="demo-notice-icon">ℹ</span>
-    <span>These 5 papers are curated demo cards showing the summary engine output format. Use <a href="#search" onclick="document.getElementById('search').scrollIntoView({behavior:'smooth'});return false;" style="color:var(--accent-cyan)">Literature Search</a> above for live results from 250M+ real papers.</span>
-    <button class="demo-notice-close" onclick="this.parentElement.style.display='none'" aria-label="Dismiss">✕</button>
-  </div>
+  <!-- BACKEND REQUIRED: papersGrid currently shows curated static demo cards.
+       Replace renderPapers() with real API calls to fetch and summarise live papers. -->
+  <div class="dev-notice">Sample data only — these are hand-curated demo cards, not live AI-generated summaries</div>
   <div class="papers-grid" id="papersGrid"></div>
 </section>
 
 <!-- ═══════════ GAP DETECTOR ═══════════ -->
 <section id="gaps">
-  <div class="section-badge">Demo · AI Pattern Analysis</div>
+  <div class="section-badge">Feature 03</div>
   <h2 class="section-title">Research <span class="highlight">Gap Detector</span></h2>
   <p class="section-sub">Identify unexplored areas, conflicting findings, and high-potential future directions using AI pattern recognition.</p>
   <div class="gap-grid fade-in">
@@ -1385,7 +1425,9 @@ footer {
       <textarea class="gap-textarea" id="gapInput" placeholder="e.g., ZnO nanoparticles for antimicrobial wound dressings&#10;&#10;Describe your current research focus...">MXene-based composites for flexible supercapacitor electrodes in wearable electronics</textarea>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px" onclick="analyzeGaps()">Analyze Research Gaps ⬡</button>
       <div class="divider"></div>
-      <div class="gap-input-label" style="margin-bottom:0.5rem">Recently Analyzed</div>
+      <!-- NOTE: "Recently Analyzed" is hardcoded sample data — no real user session history is tracked.
+           BACKEND REQUIRED: Replace with real per-user analysis history from a backend/localStorage. -->
+      <div class="gap-input-label" style="margin-bottom:0.5rem">Recent Searches <span style="font-size:0.6rem;color:var(--accent-amber);font-family:var(--font-mono)">· sample only</span></div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <div class="nano-item active" style="border-radius:8px;padding:8px 12px;font-size:0.78rem">MXene flexible electronics</div>
         <div class="nano-item" style="border-radius:8px;padding:8px 12px;font-size:0.78rem">Graphene biosensors</div>
@@ -1398,7 +1440,7 @@ footer {
 
 <!-- ═══════════ KNOWLEDGE GRAPH ═══════════ -->
 <section id="graph">
-  <div class="section-badge">Interactive Visualization</div>
+  <div class="section-badge">Feature 04</div>
   <h2 class="section-title">Scientific <span class="highlight">Knowledge Graph</span></h2>
   <p class="section-sub">Interactive network visualization connecting materials, properties, applications, and techniques across the nanomaterials landscape.</p>
   <div class="graph-container fade-in">
@@ -1415,7 +1457,7 @@ footer {
 
 <!-- ═══════════ NANOMATERIAL EXPLORER ═══════════ -->
 <section id="explorer">
-  <div class="section-badge">Curated Database</div>
+  <div class="section-badge">Feature 05</div>
   <h2 class="section-title">Nanomaterial <span class="highlight">Explorer</span></h2>
   <p class="section-sub">Browse our curated database of nanomaterials with detailed property profiles, synthesis routes, and application maps.</p>
   <div class="nano-layout fade-in">
@@ -1429,7 +1471,7 @@ footer {
 
 <!-- ═══════════ IDEA EVALUATOR ═══════════ -->
 <section id="evaluator">
-  <div class="section-badge">Demo · Scoring Engine</div>
+  <div class="section-badge">Feature 06</div>
   <h2 class="section-title">Research Idea <span class="highlight">Evaluator</span></h2>
   <p class="section-sub">Score your research ideas against novelty, feasibility, and impact — powered by AI analysis of existing literature.</p>
   <div class="eval-layout fade-in">
@@ -1438,7 +1480,9 @@ footer {
       <textarea class="eval-textarea" id="evalInput" placeholder="e.g., Silver nanoparticles for antimicrobial textile coating&#10;&#10;Describe the concept, materials involved, and intended application...">MXene Ti3C2Tx nanosheets as EMI shielding coating for flexible electronics with self-healing polymer matrix</textarea>
       <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;margin-bottom:1rem" onclick="evaluateIdea()">Evaluate Research Potential ⬡</button>
       <div class="divider"></div>
-      <div class="eval-label">Domain Context</div>
+      <!-- NOTE: "Domain Context" tags are hardcoded and not derived from the user's input.
+           BACKEND REQUIRED: Extract domain tags from user's text using NLP/LLM API. -->
+      <div class="eval-label">Domain Context <span style="font-size:0.6rem;color:var(--accent-amber);font-family:var(--font-mono)">· sample tags only</span></div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
         <div class="tag">Materials Science</div>
         <div class="tag teal">Electromagnetics</div>
@@ -1456,22 +1500,16 @@ footer {
 
 <!-- ═══════════ SIMPLIFIER ═══════════ -->
 <section id="simplifier">
-  <div class="section-badge">Demo · Pre-loaded MXene Abstract</div>
+  <div class="section-badge">Feature 07</div>
   <h2 class="section-title">Paper <span class="highlight">Simplifier</span></h2>
-  <p class="section-sub">See how the same abstract reads differently depending on your audience. Edit the text above and click Simplify to try your own paper.</p>
+  <p class="section-sub">Instantly translate complex research into clear, accessible language tailored to your audience level.</p>
   <div class="simplifier-layout fade-in">
     <div class="glass-panel">
       <div class="eval-label">Select Audience Mode</div>
       <div class="mode-selector">
-        <button class="mode-btn" onclick="setMode('undergrad',this)" title="Plain English, strong analogies, no jargon">
-          Undergraduate<span class="mode-btn-sub">Plain English</span>
-        </button>
-        <button class="mode-btn active" onclick="setMode('postgrad',this)" title="Technical but accessible, key mechanisms explained">
-          Postgraduate<span class="mode-btn-sub">Technical</span>
-        </button>
-        <button class="mode-btn" onclick="setMode('researcher',this)" title="Full scientific depth, assumes domain expertise">
-          Researcher<span class="mode-btn-sub">Expert Depth</span>
-        </button>
+        <button class="mode-btn" onclick="setMode('undergrad',this)">Undergraduate</button>
+        <button class="mode-btn active" onclick="setMode('postgrad',this)">Postgraduate</button>
+        <button class="mode-btn" onclick="setMode('researcher',this)">Researcher</button>
       </div>
       <div class="eval-label">Paper Abstract / Text</div>
       <textarea class="eval-textarea" id="simplifyInput" style="min-height:180px">We report the synthesis of Ti3C2Tx MXene nanosheets via selective etching of Ti3AlC2 MAX phase using LiF/HCl etchant, followed by delamination through sonication. The resulting nanosheets demonstrate outstanding electromagnetic interference (EMI) shielding effectiveness of 92 dB with a thickness of only 45 μm and exhibit remarkable electrical conductivity of 4600 S/cm. The self-healing capability was achieved through incorporation of Diels-Alder cross-linked polyurethane matrix.</textarea>
@@ -1487,7 +1525,7 @@ footer {
 
 <!-- ═══════════ TIMELINE ═══════════ -->
 <section id="timeline">
-  <div class="section-badge">Historical Reference</div>
+  <div class="section-badge">Feature 08</div>
   <h2 class="section-title">Research <span class="highlight">Timeline</span></h2>
   <p class="section-sub">Visual chronology of landmark discoveries in nanomaterials science — trace the evolution of ideas and technologies.</p>
   <div class="timeline-wrap" id="timelineWrap">
@@ -1498,17 +1536,20 @@ footer {
 
 <!-- ═══════════ ANALYTICS ═══════════ -->
 <section id="analytics">
-  <div class="section-badge">Illustrative Data</div>
+  <div class="section-badge">Feature 09</div>
   <h2 class="section-title">Research <span class="highlight">Analytics</span></h2>
-  <p class="section-sub">Illustrative publication trend charts and activity patterns based on Web of Science data. Numbers represent approximate field-wide scale.</p>
+  <!-- NOTE: Analytics section uses entirely static/hardcoded data.
+       BACKEND REQUIRED: Replace KPI_DATA, pub chart data, and heatmap with
+       live queries to OpenAlex aggregation endpoints or a custom analytics backend. -->
+  <p class="section-sub">Publication trends and research activity indicators for the nanomaterials field.</p>
   <div class="analytics-grid" id="analyticsKPIs"></div>
   <div class="analytics-row fade-in">
     <div class="chart-panel glass-card" style="padding:1.5rem">
-      <div class="chart-title">Publication Growth — Nanomaterials (2015–2025)</div>
+      <div class="chart-title">Publication Growth — Nanomaterials (2015–2025) <span style="color:var(--accent-amber);font-size:0.6rem;font-family:var(--font-mono)">· estimated, not live</span></div>
       <canvas id="pub-chart"></canvas>
     </div>
     <div class="chart-panel glass-card" style="padding:1.5rem">
-      <div class="chart-title">Research Activity Heatmap (Monthly)</div>
+      <div class="chart-title">Research Activity Heatmap (Monthly) <span style="color:var(--accent-amber);font-size:0.6rem;font-family:var(--font-mono)">· illustrative only</span></div>
       <div class="heatmap-grid" id="heatmapGrid"></div>
     </div>
   </div>
@@ -1535,28 +1576,30 @@ footer {
       <a href="#explorer">Nano Explorer</a>
     </div>
     <div class="footer-col">
-      <h4>Data Sources</h4>
-      <a href="https://openalex.org" target="_blank" rel="noopener">OpenAlex ↗</a>
-      <a href="https://www.semanticscholar.org" target="_blank" rel="noopener">Semantic Scholar ↗</a>
-      <a href="https://pubchem.ncbi.nlm.nih.gov" target="_blank" rel="noopener">PubChem ↗</a>
-      <a href="https://arxiv.org" target="_blank" rel="noopener">arXiv ↗</a>
-      <a href="https://www.crossref.org" target="_blank" rel="noopener">Crossref ↗</a>
+      <h4>Integrations</h4>
+      <a href="#">PubChem API</a>
+      <a href="#">arXiv Integration</a>
+      <a href="#">Crossref API</a>
+      <a href="#">Semantic Scholar</a>
+      <a href="#">OpenAI API</a>
     </div>
     <div class="footer-col">
       <h4>Resources</h4>
-      <a href="https://praveens-chem.github.io/NanoLit-AI/" target="_blank" rel="noopener">Live Site ↗</a>
-      <a href="https://github.com" target="_blank" rel="noopener">GitHub ↗</a>
-      <a href="https://openalex.org/about" target="_blank" rel="noopener">About OpenAlex ↗</a>
-      <a href="mailto:">Contact</a>
+      <a href="#">Documentation</a>
+      <a href="#">API Reference</a>
+      <a href="#">Research Blog</a>
+      <a href="#">GitHub</a>
+      <a href="#">Contact</a>
     </div>
   </div>
   <div class="footer-bottom">
-    <div class="footer-copy">© 2025 NanoLit AI — Built for the scientific community · Search powered by <a href="https://openalex.org" target="_blank" rel="noopener" style="color:var(--text-dim);text-decoration:none">OpenAlex</a></div>
+    <div class="footer-copy">© 2025 NanoLit AI — Built for the scientific community</div>
     <div class="api-badges">
-      <span class="api-badge" title="Live search API">OPENALEX LIVE</span>
-      <span class="api-badge" title="Fallback search API">SEMANTIC SCHOLAR</span>
-      <span class="api-badge" title="AI chat via OpenRouter">OPENROUTER</span>
-      <span class="api-badge" title="Chemistry database">PUBCHEM</span>
+      <span class="api-badge">CLAUDE API</span>
+      <span class="api-badge">PUBCHEM</span>
+      <span class="api-badge">ARXIV</span>
+      <span class="api-badge">SEMANTIC SCHOLAR</span>
+      <span class="api-badge">CROSSREF</span>
     </div>
   </div>
 </footer>
@@ -1795,17 +1838,11 @@ const KPI_DATA = [
 
 /* ─── HERO COUNTER ANIMATION ─────────────────────── */
 function animateCounter(el, target, suffix='', duration=2000) {
-  if (!el) return;
-  let start = 0;
-  const step = target / (duration / 16);
+  let start = 0, step = target / (duration / 16);
   const timer = setInterval(() => {
     start += step;
-    if (start >= target) {
-      el.textContent = target.toLocaleString() + suffix;
-      clearInterval(timer);
-    } else {
-      el.textContent = Math.floor(start).toLocaleString() + suffix;
-    }
+    if (start >= target) { el.textContent = target.toLocaleString() + suffix; clearInterval(timer); }
+    else { el.textContent = Math.floor(start).toLocaleString() + suffix; }
   }, 16);
 }
 
@@ -1992,28 +2029,28 @@ function switchTab(btn, bodyId) {
 }
 
 /* ─── RENDER GAPS ───────────────────────────────── */
+/*
+ * BACKEND REQUIRED: analyzeGaps() must be replaced with a real API call that:
+ *   1. Accepts the user's research domain text from #gapInput
+ *   2. Queries a literature API (e.g., OpenAlex, Semantic Scholar) for related papers
+ *   3. Uses an LLM or specialised analysis model to identify genuine research gaps
+ *   4. Returns structured gap objects: { type, title, desc, confidence }
+ * Until that backend exists, this function shows an honest "coming soon" state.
+ */
 function analyzeGaps() {
   const container = document.getElementById('gapResults');
-  container.innerHTML = '<div style="text-align:center;padding:2rem;font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted)">Analyzing literature patterns...</div>';
-  setTimeout(() => {
-    container.innerHTML = GAP_RESULTS.map((g,i) => `
-      <div class="glass-card gap-card fade-in" style="transition-delay:${i*0.12}s">
-        <div class="gap-icon ${g.iconClass}">${g.icon}</div>
-        <div>
-          <div class="gap-type">${g.type}</div>
-          <div class="gap-title">${g.title}</div>
-          <div class="gap-desc">${g.desc}</div>
-          <div class="confidence-bar">
-            <span class="conf-label">CONFIDENCE</span>
-            <div class="conf-dots">
-              ${[1,2,3,4,5].map(n=>`<div class="conf-dot ${n<=g.confidence?'filled':''}"></div>`).join('')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `).join('');
-    observeFadeIns();
-  }, 900);
+  container.innerHTML = `
+    <div class="glass-card coming-soon-state">
+      <div class="coming-soon-icon">◎</div>
+      <div class="coming-soon-label">Under Development</div>
+      <h3 class="coming-soon-title">Gap Analysis Coming Soon</h3>
+      <p class="coming-soon-desc">
+        This feature is under development and currently does not perform real analysis.
+        When live, it will query the scientific literature and use AI to surface genuine
+        research gaps, conflicting findings, and unexplored directions relevant to your domain.
+      </p>
+    </div>
+  `;
 }
 
 /* ─── NANOMATERIAL EXPLORER ────────────────────── */
@@ -2068,68 +2105,28 @@ function renderNanoDetail(i) {
 }
 
 /* ─── IDEA EVALUATOR ────────────────────────────── */
+/*
+ * BACKEND REQUIRED: evaluateIdea() must be replaced with a real API call that:
+ *   1. Accepts the user's research idea text from #evalInput
+ *   2. Searches literature (OpenAlex / Semantic Scholar) for prior art
+ *   3. Uses an LLM to score Novelty, Feasibility, Impact, Saturation
+ *   4. Returns structured scores and evidence-backed suggestions
+ * Until that backend exists, this function shows an honest "coming soon" state.
+ */
 function evaluateIdea() {
   const container = document.getElementById('evalResults');
-  container.innerHTML = '<div style="text-align:center;padding:3rem;font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted)">Analyzing research landscape...</div>';
-  setTimeout(() => {
-    const novelty = 82, feasibility = 76, impact = 88, saturation = 34;
-    container.innerHTML = `
-      <div class="eval-score-ring">
-        <div class="ring-wrap">
-          <svg class="ring-svg" viewBox="0 0 140 140">
-            <circle class="ring-bg" cx="70" cy="70" r="58"/>
-            <circle class="ring-fill" cx="70" cy="70" r="58"
-              stroke="url(#ringGrad)"
-              stroke-dasharray="${2*Math.PI*58}"
-              stroke-dashoffset="${2*Math.PI*58*(1-novelty/100)}"
-            />
-            <defs>
-              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#8b5cf6"/>
-                <stop offset="100%" stop-color="#00dcff"/>
-              </linearGradient>
-            </defs>
-          </svg>
-          <div class="ring-label">
-            <span class="ring-num">${novelty}</span>
-            <span class="ring-sub">Novelty Score</span>
-          </div>
-        </div>
-      </div>
-      <div class="eval-metrics">
-        ${[
-          {name:'Research Feasibility',val:feasibility,color:'#00dcff',pct:feasibility},
-          {name:'Potential Impact',val:impact,color:'#00ffcc',pct:impact},
-          {name:'Field Saturation',val:saturation,color:'#f43f5e',pct:saturation},
-          {name:'Commercial Readiness',val:61,color:'#f59e0b',pct:61}
-        ].map(m=>`
-          <div class="eval-metric">
-            <div class="eval-metric-header">
-              <span class="eval-metric-name">${m.name}</span>
-              <span class="eval-metric-val" style="color:${m.color}">${m.val}/100</span>
-            </div>
-            <div class="eval-metric-bar">
-              <div class="eval-metric-fill" style="width:${m.pct}%;background:${m.color}"></div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div class="suggestions-grid">
-        <div class="suggestion-item">
-          <span class="suggestion-icon">✦</span>
-          <span class="suggestion-text">Consider incorporating boron nitride nanotubes as additional reinforcement to enhance thermal management — no published work exists on this triple combination.</span>
-        </div>
-        <div class="suggestion-item">
-          <span class="suggestion-icon">→</span>
-          <span class="suggestion-text">Explore microwave-triggered remote healing using Fe3O4 nanoparticles embedded in the PU matrix alongside MXene.</span>
-        </div>
-        <div class="suggestion-item">
-          <span class="suggestion-icon">◎</span>
-          <span class="suggestion-text">The 5G mmWave band (28/39 GHz) remains undercharacterized for MXene films — a high-value research direction with commercial relevance.</span>
-        </div>
-      </div>
-    `;
-  }, 1200);
+  container.innerHTML = `
+    <div class="coming-soon-state">
+      <div class="coming-soon-icon">⬡</div>
+      <div class="coming-soon-label">Under Development</div>
+      <h3 class="coming-soon-title">Idea Evaluation Coming Soon</h3>
+      <p class="coming-soon-desc">
+        This feature is under development and currently does not perform real analysis.
+        When live, it will score your research idea for novelty, feasibility, impact,
+        and field saturation using real literature data and AI reasoning.
+      </p>
+    </div>
+  `;
 }
 
 /* ─── SIMPLIFIER ────────────────────────────────── */
@@ -2142,44 +2139,26 @@ function setMode(mode, btn) {
 
 function simplifyPaper() {
   const container = document.getElementById('simplifyResult');
-  container.innerHTML = '<div style="text-align:center;padding:3rem;font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted)">Generating simplified explanation...</div>';
-  const modes = {
-    undergrad: {
-      text: `Imagine stacking sheets of carbon thinner than a single atom to build a super-strong, electrically active "armor" — that's essentially what <span class="highlight-word">MXene</span> is. Scientists peeled apart a ceramic material called <span class="highlight-word">Ti₃AlC₂</span> using acid, like removing layers from an onion, to get super-thin sheets that can block electronic "noise" from devices 92 times better than typical materials — in a film thinner than a human hair.`,
-      analogy: `It's like wrapping your phone in a special layer of "invisible armor" so thin you can't feel it, but which completely blocks the electronic interference that scrambles signals.`,
-      terms: ["MXene","Ti₃C₂","EMI Shielding","MAX Phase","Etching","Self-Healing"]
-    },
-    postgrad: {
-      text: `<span class="highlight-word">Ti₃C₂Tₓ MXene</span> was synthesized via selective etching of Al layers from <span class="highlight-word">Ti₃AlC₂ MAX phase</span> using LiF/HCl etchant — a milder, safer alternative to HF-based protocols. Post-delamination SWCNT-ultrasonication yields large-flake nanosheets with high interlayer separation. The <span class="highlight-word">EMI shielding effectiveness (SE)</span> of 92 dB at 45 μm thickness demonstrates near-perfect absorption-dominated shielding. The <span class="highlight-word">Diels-Alder PU matrix</span> provides reversible covalent cross-linking enabling autonomous self-repair at room temperature.`,
-      analogy: `The MAX phase acts as a molecular "sandwich" with the Al layer being selectively removed, just as you'd slide out the filling — leaving the 2D carbide "bread" which is the MXene.`,
-      terms: ["MAX Phase","Ti₃C₂Tₓ","LiF/HCl Etching","EMI SE","Diels-Alder","Electrical Conductivity"]
-    },
-    researcher: {
-      text: `<span class="highlight-word">Ti₃C₂Tₓ</span> was synthesized via LiF/HCl intercalative etching at room temperature, enabling controlled delamination and preservation of surface termination groups (-OH, -F, -O). The measured <span class="highlight-word">σ = 4600 S/cm</span> suggests minimal defect density and effective percolation network formation. EMI SE of 92 dB at 45 μm far exceeds the theoretical prediction for reflection-dominated shielding, implying significant multiple internal reflection contribution. The <span class="highlight-word">retro Diels-Alder</span> de-crosslinking at ~90°C enables healing, though the room-temperature mechanism likely involves H-bond reconstruction at fractured interfaces.`,
-      analogy: `The conductivity-shielding coupling here suggests the dominant shielding mechanism transitions from reflection at lower MXene loading to a hybrid absorption-reflection regime above the percolation threshold.`,
-      terms: ["Surface Terminations","Percolation Network","Retro Diels-Alder","SE Mechanisms","σ Conductivity","ICP-MS"]
-    }
-  };
-  setTimeout(() => {
-    const m = modes[currentMode];
-    container.innerHTML = `
-      <div class="simplified-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem">
-          <div class="simplified-title" style="margin-bottom:0">Simplified for ${currentMode === 'undergrad' ? 'Undergraduate' : currentMode === 'postgrad' ? 'Postgraduate' : 'Researcher'} Level</div>
-          <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim);border:1px solid var(--border-glow);padding:2px 8px;border-radius:4px;letter-spacing:0.08em">DEMO</span>
-        </div>
-        <div class="simplified-text">${m.text}</div>
-        <div class="analogy-box">
-          <div class="analogy-label">Analogy</div>
-          <div class="analogy-text">${m.analogy}</div>
-        </div>
-        <div style="margin-top:1rem">
-          <div class="nano-apps-label">Key Terms</div>
-          <div class="keyterms">${m.terms.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-        </div>
-      </div>
-    `;
-  }, 800);
+  /*
+   * BACKEND REQUIRED: This function must be replaced with a real API call that:
+   *   1. Reads the user's pasted abstract/text from #simplifyInput
+   *   2. Reads the selected audience mode from currentMode
+   *   3. Sends a tailored simplification prompt to an LLM (Claude, GPT-4, OpenRouter, etc.)
+   *   4. Streams or displays the AI-generated simplification, analogy, and key terms
+   * Until that backend exists, this function shows an honest "coming soon" state.
+   */
+  container.innerHTML = `
+    <div class="coming-soon-state">
+      <div class="coming-soon-icon">◎</div>
+      <div class="coming-soon-label">Under Development</div>
+      <h3 class="coming-soon-title">Paper Simplifier Coming Soon</h3>
+      <p class="coming-soon-desc">
+        This feature is under development and currently does not perform real analysis.
+        When live, it will send your pasted abstract to an AI model and return
+        a genuine, audience-appropriate simplification with analogies and key terms.
+      </p>
+    </div>
+  `;
 }
 
 /* ─── TIMELINE ──────────────────────────────────── */
@@ -2204,10 +2183,24 @@ function renderTimeline() {
 }
 
 /* ─── ANALYTICS ─────────────────────────────────── */
+/*
+ * BACKEND REQUIRED: renderAnalytics() currently uses entirely hardcoded static data.
+ * Replace KPI_DATA with live queries to:
+ *   - OpenAlex /works?group_by=publication_year for publication counts
+ *   - A custom analytics backend for YoY delta calculations
+ * Replace pub chart data with live aggregated counts per year.
+ * Replace heatmap intensities with real monthly submission data.
+ */
 function renderAnalytics() {
-  // KPIs
+  // KPIs — show with static-data disclaimer
   const kpiContainer = document.getElementById('analyticsKPIs');
-  kpiContainer.innerHTML = KPI_DATA.map(k => `
+  kpiContainer.innerHTML = `
+    <div class="glass-card analytics-kpi fade-in" style="grid-column:1/-1;padding:1.2rem 1.5rem;text-align:left">
+      <div class="dev-notice" style="margin-bottom:0">
+        These figures are static estimates, not live data. This feature is under development and currently does not perform real analysis.
+      </div>
+    </div>
+  ` + KPI_DATA.map(k => `
     <div class="glass-card analytics-kpi fade-in">
       <span class="kpi-num">${k.num}</span>
       <span class="kpi-delta">${k.delta}</span>
@@ -2215,7 +2208,7 @@ function renderAnalytics() {
     </div>
   `).join('');
 
-  // Publication chart
+  // Publication chart — static data, clearly labelled in chart title via HTML above
   const canvas = document.getElementById('pub-chart');
   const ctx = canvas.getContext('2d');
   canvas.width = canvas.offsetWidth * window.devicePixelRatio || 400;
@@ -2255,7 +2248,7 @@ function renderAnalytics() {
     ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
   });
 
-  // Heatmap
+  // Heatmap — static data, not real monthly activity
   const heatmap = document.getElementById('heatmapGrid');
   heatmap.innerHTML = '';
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -2265,7 +2258,7 @@ function renderAnalytics() {
     cell.className = 'heat-cell';
     const a = intensities[i];
     cell.style.background = `rgba(0,${Math.floor(150+a*105)},${Math.floor(150+a*105)},${a*0.6+0.1})`;
-    cell.title = `${m}: ${Math.round(a*100)}% activity`;
+    cell.title = `${m}: illustrative only — not real data`;
     heatmap.appendChild(cell);
   });
 }
@@ -2618,10 +2611,10 @@ async function runSearch() {
     const wait = Math.ceil((SS_COOLDOWN - msSinceLast) / 1000);
     const container = document.getElementById('searchResults');
     container.innerHTML = `
-      <div class="search-state-msg" style="opacity:0.8">
+      <div class="search-state-msg" style="opacity:0.7">
         <div class="search-state-icon" style="color:var(--accent-amber)">⏱</div>
-        <div class="search-state-title" style="font-size:0.95rem">Ready in ${wait}s</div>
-        <div class="search-state-desc">Pausing briefly to respect OpenAlex rate limits (free, no key needed).</div>
+        <div class="search-state-title" style="font-size:0.95rem">Please wait ${wait}s</div>
+        <div class="search-state-desc">Cooldown prevents API rate limiting. Ready in ${wait} second${wait !== 1 ? 's' : ''}.</div>
       </div>`;
     return;
   }
@@ -2730,24 +2723,47 @@ function setSearch(elOrStr) {
 
 /* Enter-key handled by _wire('mainSearch') in the INIT block — no duplicate needed. */
 
-/* ─── AI PANEL — OpenRouter + localStorage key persistence ──── */
+/* ─── AI PANEL — Groq (free tier, no credit card) ──── */
+/* API docs: https://console.groq.com/docs/openai
+   Free models: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
+   Rate limits: ~14,400 tokens/day on 70B; higher on smaller models.
+   Groq uses the OpenAI-compatible chat/completions format — only the base URL changes. */
 
-const OR_API        = 'https://openrouter.ai/api/v1/chat/completions';
-const OR_MODEL      = 'meta-llama/llama-3.1-8b-instruct:free';
-const OR_KEY_STORE  = 'nanolit_or_key';
+const OR_API        = 'https://api.groq.com/openai/v1/chat/completions';
+const OR_MODEL      = 'llama-3.3-70b-versatile';
+const OR_KEY_STORE  = 'nanolit_groq_key';
 
 const _aiHistory = [];
 const _aiSystem  = `You are NanoLit AI, an expert scientific assistant specialising in nanomaterials, nanotechnology, and materials science. Help researchers find papers, identify research gaps, analyse methodologies, and explain concepts. Keep responses under 120 words unless detail is explicitly requested. Plain text only.`;
+
+/* ── Key UI helpers ─────────────────────────────── */
+function _aiShowLocked() {
+  const entry  = document.getElementById('aiKeyEntry');
+  const locked = document.getElementById('aiKeyLocked');
+  const welcome = document.getElementById('aiWelcomeMsg');
+  if (entry)  entry.style.display  = 'none';
+  if (locked) locked.style.display = 'flex';
+  // Collapse welcome message once key is set — chat history takes its place
+  if (welcome) welcome.style.display = 'none';
+}
+
+function _aiShowEntry() {
+  const entry  = document.getElementById('aiKeyEntry');
+  const locked = document.getElementById('aiKeyLocked');
+  const welcome = document.getElementById('aiWelcomeMsg');
+  if (entry)  entry.style.display  = 'block';
+  if (locked) locked.style.display = 'none';
+  if (welcome) welcome.style.display = 'block';
+}
 
 /* ── localStorage key helpers ──────────────────────────── */
 function aiLoadKey() {
   try {
     const saved = localStorage.getItem(OR_KEY_STORE);
     if (!saved) return;
-    const inp   = document.getElementById('aiKeyInput');
-    const badge = document.getElementById('aiKeySaved');
-    if (inp)   inp.value = saved;
-    if (badge) badge.style.display = 'inline';
+    const inp = document.getElementById('aiKeyInput');
+    if (inp) inp.value = saved;
+    _aiShowLocked();
   } catch(e) {}
 }
 
@@ -2757,21 +2773,25 @@ function aiSaveKey() {
   if (!key) { aiClearKey(); return; }
   try {
     localStorage.setItem(OR_KEY_STORE, key);
-    const badge = document.getElementById('aiKeySaved');
-    if (badge) { badge.style.display = 'inline'; badge.textContent = '✓ saved!'; }
-    setTimeout(() => {
-      const b = document.getElementById('aiKeySaved');
-      if (b) b.textContent = '✓ saved';
-    }, 1500);
+    _aiShowLocked();
   } catch(e) { alert('Could not save — localStorage may be blocked in private mode.'); }
 }
 
 function aiClearKey() {
   try { localStorage.removeItem(OR_KEY_STORE); } catch(e) {}
-  const inp   = document.getElementById('aiKeyInput');
-  const badge = document.getElementById('aiKeySaved');
-  if (inp)   inp.value = '';
-  if (badge) badge.style.display = 'none';
+  const inp = document.getElementById('aiKeyInput');
+  if (inp) inp.value = '';
+  _aiShowEntry();
+}
+
+/* Show the entry form so user can update the key, but keep locked state
+   visible until they confirm a new save (so they can cancel by closing panel) */
+function aiEditKey() {
+  const entry  = document.getElementById('aiKeyEntry');
+  const locked = document.getElementById('aiKeyLocked');
+  if (entry)  entry.style.display  = 'block';
+  if (locked) locked.style.display = 'none';
+  setTimeout(() => document.getElementById('aiKeyInput')?.focus(), 50);
 }
 
 /* ── UI helpers ─────────────────────────────────────── */
@@ -2819,9 +2839,9 @@ async function sendAIMessage() {
 
   if (!apiKey) {
     _aiAppend('assistant',
-      '⚠ Paste your free OpenRouter key above and click Save. ' +
-      'Get one free at <a href="https://openrouter.ai/keys" target="_blank" ' +
-      'rel="noopener" style="color:var(--accent-cyan)">openrouter.ai/keys</a> — no card needed.');
+      '⚠ Paste your free Groq API key above and click Save. ' +
+      'Get one free at <a href="https://console.groq.com/keys" target="_blank" ' +
+      'rel="noopener" style="color:var(--accent-cyan)">console.groq.com/keys</a> — no card needed.');
     return;
   }
 
@@ -2837,8 +2857,6 @@ async function sendAIMessage() {
       headers: {
         'Content-Type':  'application/json',
         'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer':  'https://nanolit-ai.github.io',
-        'X-Title':       'NanoLit AI',
       },
       body: JSON.stringify({
         model:       OR_MODEL,
@@ -2923,6 +2941,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   _wire('aiSend',  'click',   sendAIMessage);
   _wire('aiInput', 'keydown', e => { if (e.key === 'Enter') sendAIMessage(); });
+  _wire('aiKeyInput', 'keydown', e => { if (e.key === 'Enter') aiSaveKey(); });
   function _toggleAiPanel() {
     const panel   = document.getElementById('aiPanel');
     const overlay = document.getElementById('aiOverlay');
@@ -2945,37 +2964,33 @@ document.addEventListener('DOMContentLoaded', () => {
   _safe('nanoList',   renderNanoList);
   _safe('timeline',   renderTimeline);
   _safe('analytics',  renderAnalytics);
+  // analyzeGaps() is safe to auto-run — it now shows a "coming soon" state, not fake results.
+  // BACKEND REQUIRED: When real gap analysis is implemented, keep this auto-run or remove it.
   _safe('gaps',       analyzeGaps);
   // runSearch NOT called here — auto-running on load saturates mobile
   // bandwidth during startup and causes the API timeout (Bug 1 root cause).
   _safe('searchIdle', () => {
     const c = document.getElementById('searchResults');
     if (c) c.innerHTML = `
-      <div class="search-state-msg" style="opacity:0.65">
+      <div class="search-state-msg" style="opacity:0.55">
         <div class="search-state-icon" style="color:var(--accent-cyan);filter:drop-shadow(0 0 10px rgba(0,220,255,0.3))">⊕</div>
-        <div class="search-state-title" style="font-size:0.95rem">Search 250M+ Real Papers</div>
-        <div class="search-state-desc">Enter any research topic and press Enter.<br>
-          <span style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-dim);margin-top:0.5rem;display:inline-block">
-            Powered by <a href="https://openalex.org" target="_blank" rel="noopener" style="color:var(--accent-cyan);text-decoration:none">OpenAlex</a>
-            &amp; <a href="https://www.semanticscholar.org" target="_blank" rel="noopener" style="color:var(--accent-teal);text-decoration:none">Semantic Scholar</a>
-            · No API key required
-          </span>
-        </div>
+        <div class="search-state-title" style="font-size:0.95rem">Search 200M+ Papers</div>
+        <div class="search-state-desc">Enter a topic above and press Search Papers or hit Enter.</div>
       </div>`;
   });
 
-  /* ── Hero counters — figures sourced from OpenAlex/WoS/Semantic Scholar ── */
+  /* ── Hero counters ── */
   setTimeout(() => {
-    _safe('counter1', () => animateCounter(document.getElementById('stat1'), 250, 'M+', 1800));
-    _safe('counter2', () => animateCounter(document.getElementById('stat2'), 312, '', 1400));
-    _safe('counter3', () => animateCounter(document.getElementById('stat3'), 287, 'K+', 1600));
+    _safe('counter1', () => animateCounter(document.getElementById('stat1'), 2400000, '+'));
+    _safe('counter2', () => animateCounter(document.getElementById('stat2'), 847, 'K'));
+    _safe('counter3', () => animateCounter(document.getElementById('stat3'), 12400, '+'));
   }, 1600);
 
   /* ── Knowledge graph (needs layout to be settled) ── */
   setTimeout(() => _safe('graph', initKnowledgeGraph), 500);
 
-  /* ── Paper simplifier demo ── */
-  setTimeout(() => _safe('simplify', simplifyPaper), 1500);
+  /* ── Paper simplifier — do NOT auto-run on load (no fake results on startup) ── */
+  // BACKEND REQUIRED: When simplifyPaper() is real, you may restore auto-run here.
 
   /* ── Fade-in observer ── */
   _safe('fadeIns', observeFadeIns);
