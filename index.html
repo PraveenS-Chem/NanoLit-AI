@@ -1112,6 +1112,385 @@ footer {
 .dev-notice::before {
   content: '⚠';
 }
+/* ═══════════════════════════════════════════════
+   INLINE AI SUMMARY PANEL — Step 1
+   Expands below each search result card on demand.
+═══════════════════════════════════════════════ */
+.summarize-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--accent-violet);
+  border: 1px solid rgba(139,92,246,0.3);
+  background: rgba(139,92,246,0.07);
+  padding: 4px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.summarize-btn:hover {
+  background: rgba(139,92,246,0.18);
+  border-color: var(--accent-violet);
+  color: #fff;
+}
+.summarize-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.summarize-btn.done {
+  color: var(--accent-teal);
+  border-color: rgba(0,255,200,0.3);
+  background: rgba(0,255,200,0.06);
+}
+
+/* The expandable summary drawer */
+.summary-drawer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.45s cubic-bezier(0.4,0,0.2,1),
+              opacity    0.35s ease;
+  opacity: 0;
+}
+.summary-drawer.open {
+  max-height: 800px;
+  opacity: 1;
+}
+.summary-drawer-inner {
+  margin-top: 1rem;
+  padding: 1.1rem 1.2rem;
+  border-top: 1px solid rgba(139,92,246,0.2);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: rgba(139,92,246,0.04);
+}
+.summary-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  color: var(--accent-violet);
+  margin-bottom: 0.9rem;
+}
+.summary-drawer-header::before {
+  content: '⬡';
+  font-size: 0.75rem;
+}
+.summary-section {
+  margin-bottom: 0.85rem;
+}
+.summary-section-label {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+.summary-section-text {
+  font-size: 0.82rem;
+  color: var(--text-prime);
+  line-height: 1.65;
+}
+.summary-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 0.4rem;
+}
+.summary-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.5rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.summary-loading-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-violet);
+  animation: sumPulse 1.2s ease-in-out infinite;
+}
+.summary-loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.summary-loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes sumPulse {
+  0%,100% { opacity: 0.2; transform: scale(0.8); }
+  50%      { opacity: 1;   transform: scale(1.2); }
+}
+.summary-error {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent-rose);
+  padding: 0.5rem 0;
+}
+.summary-no-key {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0.4rem 0;
+}
+
+/* ═══════════════════════════════════════════════
+   SEARCH FILTERS — Step 3
+   Year range, Open Access toggle, Article type
+═══════════════════════════════════════════════ */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(0,220,255,0.03);
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.filter-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.filter-select {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border-glow);
+  border-radius: 6px;
+  color: var(--text-prime);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 5px 10px;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237090b0'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+.filter-select:focus,
+.filter-select:hover {
+  border-color: var(--accent-cyan);
+}
+.filter-select option {
+  background: #040b14;
+}
+
+/* Year range dual input */
+.year-range {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.year-input {
+  width: 62px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border-glow);
+  border-radius: 6px;
+  color: var(--text-prime);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 5px 8px;
+  outline: none;
+  transition: var(--transition);
+  text-align: center;
+}
+.year-input:focus,
+.year-input:hover { border-color: var(--accent-cyan); }
+.year-sep {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-dim);
+}
+
+/* OA toggle */
+.oa-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+.oa-toggle input[type=checkbox] { display: none; }
+.oa-track {
+  width: 34px;
+  height: 18px;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border-glow);
+  position: relative;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+.oa-thumb {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: var(--transition);
+}
+.oa-toggle input:checked ~ .oa-track {
+  background: rgba(0,255,200,0.18);
+  border-color: var(--accent-teal);
+}
+.oa-toggle input:checked ~ .oa-track .oa-thumb {
+  transform: translateX(16px);
+  background: var(--accent-teal);
+}
+.oa-toggle-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+.oa-toggle:hover .oa-toggle-label { color: var(--accent-teal); }
+
+/* Active filter count badge */
+.filter-active-badge {
+  display: none;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  background: rgba(0,220,255,0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,220,255,0.3);
+  border-radius: 10px;
+  padding: 2px 8px;
+  margin-left: auto;
+}
+.filter-active-badge.visible { display: inline-block; }
+
+/* Reset filters link */
+.filter-reset {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 3px 6px;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.filter-reset:hover { color: var(--accent-rose); }
+
+/* Sort selector lives in meta bar */
+.search-sort {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORT — Step 4
+   BibTeX / CSV / RIS download from search results
+═══════════════════════════════════════════════ */
+.export-wrap {
+  position: relative;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0,220,255,0.3);
+  background: rgba(0,220,255,0.06);
+  padding: 6px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.export-btn:hover {
+  background: rgba(0,220,255,0.14);
+  border-color: var(--accent-cyan);
+}
+.export-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.export-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: var(--glass-bg);
+  border: 1px solid var(--border-glow);
+  border-radius: 10px;
+  backdrop-filter: blur(20px);
+  min-width: 190px;
+  z-index: 200;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+.export-menu.open { display: block; }
+.export-menu-header {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  padding: 10px 14px 6px;
+  border-bottom: 1px solid var(--border-glow);
+}
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: var(--transition);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.export-option:last-child { border-bottom: none; }
+.export-option:hover { background: rgba(0,220,255,0.06); }
+.export-option-icon {
+  font-size: 0.9rem;
+  width: 20px;
+  text-align: center;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+.export-option-info { flex: 1; }
+.export-option-name {
+  font-size: 0.78rem;
+  color: var(--text-prime);
+  font-weight: 500;
+}
+.export-option-desc {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.export-count-note {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  padding: 7px 14px 10px;
+  border-top: 1px solid var(--border-glow);
+  text-align: center;
+}
+
 /* Dimmed stat — makes hero counters visually distinct as estimates */
 .stat-estimate-note {
   font-family: var(--font-mono);
@@ -1194,6 +1573,16 @@ footer {
               onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-glow)'">
         Remove
       </button>
+    </div>
+
+    <!-- STATE C: fully hidden — tiny gear in header area to re-access key settings -->
+    <div id="aiKeyGear" style="display:none;justify-content:flex-end;margin-top:-0.5rem;margin-bottom:0.3rem">
+      <button onclick="aiEditKey()" title="API key settings"
+              style="background:transparent;border:none;cursor:pointer;
+                     color:var(--text-dim);font-size:0.85rem;padding:2px 4px;
+                     transition:var(--transition);line-height:1"
+              onmouseover="this.style.color='var(--accent-cyan)'"
+              onmouseout="this.style.color='var(--text-dim)'">⚙</button>
     </div>
 
     <div class="ai-model-badge">llama-3.3-70b-versatile · groq.com · free tier</div>
@@ -1374,6 +1763,62 @@ footer {
         <button class="search-btn" onclick="runSearch()">Search Papers →</button>
       </div>
     </div>
+
+    <!-- ── FILTER BAR ─────────────────────────────────────────────── -->
+    <div class="filter-bar" id="filterBar">
+
+      <!-- Year From -->
+      <div class="filter-group">
+        <span class="filter-label">Year</span>
+        <div class="year-range">
+          <input class="year-input" id="filterYearFrom" type="number"
+                 min="1990" max="2025" placeholder="2000"
+                 oninput="updateFilterBadge()" />
+          <span class="year-sep">–</span>
+          <input class="year-input" id="filterYearTo" type="number"
+                 min="1990" max="2025" placeholder="2025"
+                 oninput="updateFilterBadge()" />
+        </div>
+      </div>
+
+      <!-- Article Type -->
+      <div class="filter-group">
+        <span class="filter-label">Type</span>
+        <select class="filter-select" id="filterType" onchange="updateFilterBadge()">
+          <option value="">All Types</option>
+          <option value="article">Research Article</option>
+          <option value="review">Review</option>
+          <option value="book-chapter">Book Chapter</option>
+          <option value="conference-paper">Conference Paper</option>
+        </select>
+      </div>
+
+      <!-- Sort -->
+      <div class="filter-group">
+        <span class="filter-label">Sort</span>
+        <select class="filter-select" id="filterSort" onchange="updateFilterBadge()">
+          <option value="relevance">Relevance</option>
+          <option value="cited_by_count:desc">Most Cited</option>
+          <option value="publication_year:desc">Newest First</option>
+          <option value="publication_year:asc">Oldest First</option>
+        </select>
+      </div>
+
+      <!-- Open Access toggle -->
+      <div class="filter-group">
+        <label class="oa-toggle" title="Show only Open Access papers">
+          <input type="checkbox" id="filterOA" onchange="updateFilterBadge()" />
+          <div class="oa-track"><div class="oa-thumb"></div></div>
+          <span class="oa-toggle-label">Open Access Only</span>
+        </label>
+      </div>
+
+      <!-- Active filter badge + Reset -->
+      <span class="filter-active-badge" id="filterBadge">0 filters</span>
+      <button class="filter-reset" id="filterReset" onclick="resetFilters()" style="display:none">✕ Reset</button>
+    </div>
+    <!-- ── END FILTER BAR ─────────────────────────────────────────── -->
+
     <div class="search-tags" id="searchTags">
       <span class="search-tag" onclick="setSearch(this)">Graphene oxide photocatalysis</span>
       <span class="search-tag" onclick="setSearch(this)">MXene energy storage</span>
@@ -1384,11 +1829,40 @@ footer {
     </div>
     <div class="search-meta-bar">
       <div class="search-meta-count" id="searchMetaCount"></div>
+      <!-- Export dropdown — hidden until papers are loaded -->
+      <div class="export-wrap" id="exportWrap" style="display:none">
+        <button class="export-btn" id="exportBtn" onclick="toggleExportMenu(event)">
+          ↓ Export
+        </button>
+        <div class="export-menu" id="exportMenu">
+          <div class="export-menu-header">EXPORT CURRENT RESULTS</div>
+          <div class="export-option" onclick="exportPapers('bibtex')">
+            <span class="export-option-icon">❞</span>
+            <div class="export-option-info">
+              <div class="export-option-name">BibTeX</div>
+              <div class="export-option-desc">Zotero, Mendeley, Overleaf</div>
+            </div>
+          </div>
+          <div class="export-option" onclick="exportPapers('ris')">
+            <span class="export-option-icon">⊞</span>
+            <div class="export-option-info">
+              <div class="export-option-name">RIS</div>
+              <div class="export-option-desc">EndNote, RefWorks, Papers</div>
+            </div>
+          </div>
+          <div class="export-option" onclick="exportPapers('csv')">
+            <span class="export-option-icon">⊟</span>
+            <div class="export-option-info">
+              <div class="export-option-name">CSV</div>
+              <div class="export-option-desc">Excel, Sheets, custom scripts</div>
+            </div>
+          </div>
+          <div class="export-count-note" id="exportCountNote">0 papers loaded</div>
+        </div>
+      </div>
     </div>
     <div class="search-results-grid" id="searchResults"></div>
     <div class="trending-section">
-      <!-- NOTE: Trending Topics are hardcoded — not computed from real publication data.
-           BACKEND REQUIRED: Replace with API call to fetch genuinely trending nanomaterials topics. -->
       <div class="trending-label">Suggested Topics <span style="font-size:0.65rem;color:var(--accent-amber);font-family:var(--font-mono);margin-left:8px">· curated, not live</span></div>
       <div class="trending-chips">
         <div class="trending-chip" onclick="setSearch('MXene Supercapacitors')"><span class="trend-arrow">↑</span> MXene Supercapacitors</div>
@@ -1502,7 +1976,7 @@ footer {
 <section id="simplifier">
   <div class="section-badge">Feature 07</div>
   <h2 class="section-title">Paper <span class="highlight">Simplifier</span></h2>
-  <p class="section-sub">Instantly translate complex research into clear, accessible language tailored to your audience level.</p>
+  <p class="section-sub">Paste any abstract and get a genuine AI explanation tailored to your audience — powered by Groq / Llama-3.3-70B.</p>
   <div class="simplifier-layout fade-in">
     <div class="glass-panel">
       <div class="eval-label">Select Audience Mode</div>
@@ -1511,13 +1985,28 @@ footer {
         <button class="mode-btn active" onclick="setMode('postgrad',this)">Postgraduate</button>
         <button class="mode-btn" onclick="setMode('researcher',this)">Researcher</button>
       </div>
-      <div class="eval-label">Paper Abstract / Text</div>
-      <textarea class="eval-textarea" id="simplifyInput" style="min-height:180px">We report the synthesis of Ti3C2Tx MXene nanosheets via selective etching of Ti3AlC2 MAX phase using LiF/HCl etchant, followed by delamination through sonication. The resulting nanosheets demonstrate outstanding electromagnetic interference (EMI) shielding effectiveness of 92 dB with a thickness of only 45 μm and exhibit remarkable electrical conductivity of 4600 S/cm. The self-healing capability was achieved through incorporation of Diels-Alder cross-linked polyurethane matrix.</textarea>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;margin-top:1rem" onclick="simplifyPaper()">Simplify This Paper ⬡</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
+        <div class="eval-label" style="margin-bottom:0">Paper Abstract / Text</div>
+        <button onclick="document.getElementById('simplifyInput').value='';updateSimplifyCount()"
+                style="background:transparent;border:none;cursor:pointer;font-family:var(--font-mono);
+                       font-size:0.6rem;color:var(--text-dim);padding:2px 6px;transition:var(--transition)"
+                onmouseover="this.style.color='var(--accent-rose)'"
+                onmouseout="this.style.color='var(--text-dim)'">✕ Clear</button>
+      </div>
+      <textarea class="eval-textarea" id="simplifyInput" style="min-height:180px"
+                oninput="updateSimplifyCount()"
+                placeholder="Paste a paper abstract here…">We report the synthesis of Ti3C2Tx MXene nanosheets via selective etching of Ti3AlC2 MAX phase using LiF/HCl etchant, followed by delamination through sonication. The resulting nanosheets demonstrate outstanding electromagnetic interference (EMI) shielding effectiveness of 92 dB with a thickness of only 45 μm and exhibit remarkable electrical conductivity of 4600 S/cm. The self-healing capability was achieved through incorporation of Diels-Alder cross-linked polyurethane matrix.</textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.4rem;margin-bottom:0.9rem">
+        <span id="simplifyCount" style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim)">0 words</span>
+        <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text-dim)">max ~600 words</span>
+      </div>
+      <button class="btn btn-primary" id="simplifyBtn"
+              style="width:100%;justify-content:center;padding:12px"
+              onclick="simplifyPaper()">Simplify This Paper ⬡</button>
     </div>
     <div id="simplifyResult" class="glass-panel">
       <div style="text-align:center;color:var(--text-dim);padding:3rem;font-family:var(--font-mono);font-size:0.8rem">
-        [ Simplified explanation will appear here ]
+        [ Paste an abstract and click Simplify ]
       </div>
     </div>
   </div>
@@ -2131,34 +2620,225 @@ function evaluateIdea() {
 
 /* ─── SIMPLIFIER ────────────────────────────────── */
 let currentMode = 'postgrad';
+
 function setMode(mode, btn) {
   currentMode = mode;
-  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 }
 
-function simplifyPaper() {
+/* Live word counter for the textarea */
+function updateSimplifyCount() {
+  const text  = (document.getElementById('simplifyInput')?.value || '').trim();
+  const words = text ? text.split(/\s+/).length : 0;
+  const el    = document.getElementById('simplifyCount');
+  if (el) el.textContent = `${words} word${words !== 1 ? 's' : ''}`;
+}
+
+/* Copy result text to clipboard */
+function copySimplification() {
+  const result = document.getElementById('simplifyResult');
+  const text   = result?.innerText || '';
+  navigator.clipboard?.writeText(text).then(() => {
+    const btn = document.getElementById('simplifyCopyBtn');
+    if (btn) { btn.textContent = '✓ Copied'; setTimeout(() => btn.textContent = '⎘ Copy', 1800); }
+  }).catch(() => {});
+}
+
+/*
+ * simplifyPaper() — Step 2 implementation
+ *
+ * Flow:
+ *   1. Read abstract text from #simplifyInput
+ *   2. Read audience level from currentMode
+ *   3. Build a tailored system + user prompt for that audience
+ *   4. POST to Groq (llama-3.3-70b-versatile)
+ *   5. Parse JSON response → render 4 sections + key terms
+ *
+ * Prompt strategy:
+ *   - Each audience level gets a different system persona and vocabulary constraint
+ *   - We ask for JSON output with fixed keys so rendering is consistent
+ *   - temperature 0.5 — slightly creative for good analogies but still factual
+ */
+async function simplifyPaper() {
   const container = document.getElementById('simplifyResult');
-  /*
-   * BACKEND REQUIRED: This function must be replaced with a real API call that:
-   *   1. Reads the user's pasted abstract/text from #simplifyInput
-   *   2. Reads the selected audience mode from currentMode
-   *   3. Sends a tailored simplification prompt to an LLM (Claude, GPT-4, OpenRouter, etc.)
-   *   4. Streams or displays the AI-generated simplification, analogy, and key terms
-   * Until that backend exists, this function shows an honest "coming soon" state.
-   */
+  const btn       = document.getElementById('simplifyBtn');
+  const text      = (document.getElementById('simplifyInput')?.value || '').trim();
+
+  if (!text) {
+    container.innerHTML = `<div class="coming-soon-state" style="min-height:140px">
+      <div class="coming-soon-icon" style="font-size:1.4rem">◎</div>
+      <p class="coming-soon-desc">Paste an abstract into the text area first.</p>
+    </div>`;
+    return;
+  }
+
+  // Get Groq key
+  let apiKey = '';
+  try { apiKey = localStorage.getItem(OR_KEY_STORE) || ''; } catch(e) {}
+
+  if (!apiKey) {
+    container.innerHTML = `<div class="summary-drawer-inner" style="border-top:none">
+      <div class="summary-no-key" style="padding:1rem 0">
+        ⚠ No Groq API key found. Open the <strong>AI Chat</strong> panel, paste your
+        free key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener"
+        style="color:var(--accent-cyan)">console.groq.com/keys</a>, then try again.
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Audience-specific system personas
+  const personas = {
+    undergrad: `You explain scientific papers to undergraduate students with no specialist background.
+Use everyday analogies and avoid jargon. If a technical term is unavoidable, define it immediately.
+Write at a clear, engaging level — like a science journalist.`,
+
+    postgrad: `You explain scientific papers to postgraduate students who have domain knowledge but
+may not be expert in this specific sub-field. Use correct terminology but explain the context
+and significance clearly.`,
+
+    researcher: `You explain scientific papers to active research experts in nanomaterials and
+materials science. Be precise, use field-standard terminology, note methodological nuances,
+and highlight where this work sits relative to the current state of the art.`,
+  };
+
+  const wordLimits = { undergrad: '60', postgrad: '80', researcher: '90' };
+  const modeLabel  = { undergrad: 'Undergraduate', postgrad: 'Postgraduate', researcher: 'Researcher Expert' };
+
+  const userPrompt = `Analyse this research abstract and return ONLY a valid JSON object — no markdown fences, no preamble:
+
+Abstract:
+"""
+${text.slice(0, 3000)}
+"""
+
+Return exactly this JSON structure:
+{
+  "plainExplanation": "What this research is about and what was done — max ${wordLimits[currentMode]} words, tailored to the audience.",
+  "analogy": "A vivid real-world analogy that makes the core concept intuitive — 1–2 sentences.",
+  "whyItMatters": "The real-world impact or scientific importance — 1–2 sentences.",
+  "keyTerms": ["term1", "term2", "term3", "term4", "term5"]
+}`;
+
+  // Show loading state
+  btn.disabled    = true;
+  btn.textContent = '◌ Simplifying…';
   container.innerHTML = `
-    <div class="coming-soon-state">
-      <div class="coming-soon-icon">◎</div>
-      <div class="coming-soon-label">Under Development</div>
-      <h3 class="coming-soon-title">Paper Simplifier Coming Soon</h3>
-      <p class="coming-soon-desc">
-        This feature is under development and currently does not perform real analysis.
-        When live, it will send your pasted abstract to an AI model and return
-        a genuine, audience-appropriate simplification with analogies and key terms.
-      </p>
-    </div>
-  `;
+    <div class="summary-drawer-inner" style="border-top:none;min-height:180px">
+      <div class="summary-drawer-header">AI SIMPLIFICATION · ${modeLabel[currentMode].toUpperCase()}</div>
+      <div class="summary-loading">
+        <div class="summary-loading-dot"></div>
+        <div class="summary-loading-dot"></div>
+        <div class="summary-loading-dot"></div>
+        <span>Groq is reading your abstract…</span>
+      </div>
+    </div>`;
+
+  try {
+    const res = await fetch(OR_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model:       OR_MODEL,
+        max_tokens:  600,
+        temperature: 0.5,
+        messages: [
+          { role: 'system', content: personas[currentMode] },
+          { role: 'user',   content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    let raw = (data.choices?.[0]?.message?.content || '').trim();
+
+    // Strip markdown fences if model wraps response
+    raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/```\s*$/,'').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch(e) {
+      // Graceful fallback — show raw text in the explanation slot
+      parsed = {
+        plainExplanation: raw || 'Could not parse AI response. Please retry.',
+        analogy: '—',
+        whyItMatters: '—',
+        keyTerms: [],
+      };
+    }
+
+    const terms = Array.isArray(parsed.keyTerms) ? parsed.keyTerms : [];
+
+    container.innerHTML = `
+      <div class="summary-drawer-inner" style="border-top:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <div class="summary-drawer-header" style="margin-bottom:0">
+            AI SIMPLIFICATION · ${modeLabel[currentMode].toUpperCase()} · LLAMA-3.3-70B
+          </div>
+          <button id="simplifyCopyBtn" onclick="copySimplification()"
+                  style="background:transparent;border:1px solid var(--border-glow);border-radius:5px;
+                         color:var(--text-muted);font-family:var(--font-mono);font-size:0.6rem;
+                         padding:3px 10px;cursor:pointer;white-space:nowrap;transition:var(--transition)"
+                  onmouseover="this.style.color='var(--accent-cyan)';this.style.borderColor='var(--accent-cyan)'"
+                  onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border-glow)'">
+            ⎘ Copy
+          </button>
+        </div>
+
+        <div class="summary-section">
+          <div class="summary-section-label">Plain Explanation</div>
+          <div class="summary-section-text">${_esc(parsed.plainExplanation || '—')}</div>
+        </div>
+
+        <div class="summary-section">
+          <div class="summary-section-label">Analogy</div>
+          <div class="summary-section-text" style="font-style:italic;color:var(--accent-teal)">
+            "${_esc(parsed.analogy || '—')}"
+          </div>
+        </div>
+
+        <div class="summary-section">
+          <div class="summary-section-label">Why It Matters</div>
+          <div class="summary-section-text">${_esc(parsed.whyItMatters || '—')}</div>
+        </div>
+
+        ${terms.length ? `
+        <div class="summary-section">
+          <div class="summary-section-label">Key Terms</div>
+          <div class="summary-tags-row">
+            ${terms.map(t => `<span class="tag">${_esc(t)}</span>`).join('')}
+          </div>
+        </div>` : ''}
+
+        <div class="summary-tags-row" style="margin-top:1rem">
+          <span class="tag" style="font-size:0.6rem;opacity:0.55">
+            AI-generated · ${new Date().toLocaleDateString()} · verify key claims
+          </span>
+        </div>
+      </div>`;
+
+  } catch(err) {
+    container.innerHTML = `
+      <div class="summary-drawer-inner" style="border-top:none">
+        <div class="summary-error">⚠ ${_esc(err.message)}</div>
+        <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);margin-top:0.5rem">
+          Check your Groq key and try again.
+        </div>
+      </div>`;
+    console.error('[NanoLit Simplifier]', err);
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Simplify This Paper ⬡';
+  }
 }
 
 /* ─── TIMELINE ──────────────────────────────────── */
@@ -2339,13 +3019,36 @@ async function _timedFetch(url, ctrl) {
 async function _fetchOA(query, page) {
   const ctrl = new AbortController();
   _ss.abortCtrl = ctrl;
+
+  const f = _getFilters();
+
+  // Build OpenAlex filter string
+  // Docs: https://docs.openalex.org/api-entities/works/filter-works
+  const filters = [];
+  if (f.yearFrom) filters.push(`publication_year:>${f.yearFrom - 1}`);
+  if (f.yearTo)   filters.push(`publication_year:<${f.yearTo   + 1}`);
+  if (f.type)     filters.push(`type:${f.type}`);
+  if (f.oaOnly)   filters.push(`open_access.is_oa:true`);
+
+  // Sort mapping — OpenAlex uses sort= param
+  const sortMap = {
+    'relevance':             null,                      // OA default for search
+    'cited_by_count:desc':   'cited_by_count:desc',
+    'publication_year:desc': 'publication_year:desc',
+    'publication_year:asc':  'publication_year:asc',
+  };
+  const sortParam = sortMap[f.sort] || null;
+
   const params = new URLSearchParams({
-    search:        query,
-    'per-page':    OA_PAGE_SIZE,
+    search:     query,
+    'per-page': OA_PAGE_SIZE,
     page,
-    select:        'id,title,authorships,publication_year,abstract_inverted_index,cited_by_count,doi,open_access,type',
-    mailto:        'nanolit@github.io',   // OA best practice: polite pool
+    select:     'id,title,authorships,publication_year,abstract_inverted_index,cited_by_count,doi,open_access,type',
+    mailto:     'nanolit@github.io',
   });
+  if (filters.length) params.set('filter', filters.join(','));
+  if (sortParam)      params.set('sort',   sortParam);
+
   const data = await _timedFetch(`${OA_API}?${params}`, ctrl);
   return {
     papers: (data.results || []).map(_normOA),
@@ -2410,15 +3113,37 @@ function _normOA(raw) {
 async function _fetchSS(query, offset) {
   const ctrl = new AbortController();
   _ss.abortCtrl = ctrl;
+
+  const f = _getFilters();
+
+  // S2 supports year range via 'year' param e.g. "2010-2023"
   const params = new URLSearchParams({
     query,
     fields: SS_FIELDS,
     limit:  SS_PAGE_SIZE,
     offset,
   });
+  if (f.yearFrom || f.yearTo) {
+    const from = f.yearFrom || '1990';
+    const to   = f.yearTo   || new Date().getFullYear();
+    params.set('year', `${from}-${to}`);
+  }
+  // S2 sort mapping
+  const s2SortMap = {
+    'cited_by_count:desc':   'citationCount',
+    'publication_year:desc': 'year',
+    'publication_year:asc':  'year',
+  };
+  if (s2SortMap[f.sort]) params.set('sort', s2SortMap[f.sort]);
+
   const data = await _timedFetch(`${SS_API}?${params}`, ctrl);
+
+  // Client-side filter for OA (S2 has no server-side OA filter param)
+  let papers = (data.data || []).map(_normSS);
+  if (f.oaOnly) papers = papers.filter(p => p.isOA);
+
   return {
-    papers: (data.data || []).map(_normSS),
+    papers,
     total:  data.total || 0,
     source: 'semanticscholar',
   };
@@ -2499,19 +3224,33 @@ async function _fetchPapers(query, pageOrOffset) {
 }
 
 /* ── Render one card ─────────────────────────── */
+// Each card gets a unique id so summarizeCard() can target its specific drawer.
+let _cardIdx = 0;
+
 function _renderCard(p, i) {
   const delay    = (i % SS_PAGE_SIZE) * 0.07;
   const citClass = p.cites > 200 ? 'amber' : '';
   const oaBadge  = p.isOA
     ? `<span class="tag teal" title="Open Access">⬡ OA</span>` : '';
 
-  // Source badge — uses .tag.src-openalex or .tag.src-s2
   const srcBadge = p.source === 'openalex'
     ? `<span class="tag src-openalex" title="Source: OpenAlex">⬡ OPENALEX</span>`
     : `<span class="tag src-s2"       title="Source: Semantic Scholar">⬡ S2</span>`;
 
+  // Unique card id used by summarizeCard() — stored as data attrs on the button
+  const cid = `card-${++_cardIdx}`;
+
+  // Encode paper data as a data attribute so summarizeCard() can read it
+  // without needing a global registry (works across paginated load-more cards too)
+  const paperData = _esc(JSON.stringify({
+    title:    p.title,
+    authors:  p.authors,
+    year:     p.year,
+    abstract: p.abstract,
+  }));
+
   return `
-    <div class="glass-card result-card fade-in" style="transition-delay:${delay}s">
+    <div class="glass-card result-card fade-in" id="${cid}" style="transition-delay:${delay}s">
       <div class="result-type">${_esc(p.typeLabel)} · ${_esc(p.year)}</div>
       <div class="result-title">
         <a href="${_esc(p.url)}" target="_blank" rel="noopener noreferrer"
@@ -2526,8 +3265,160 @@ function _renderCard(p, i) {
         ${srcBadge}
         <a href="${_esc(p.url)}" target="_blank" rel="noopener noreferrer"
            class="tag view-link" title="Open paper">↗ View Paper</a>
+        <button class="summarize-btn" id="btn-${cid}"
+                data-cid="${cid}" data-paper="${paperData}"
+                onclick="summarizeCard(this)">
+          ⬡ AI Summary
+        </button>
+      </div>
+
+      <!-- Inline summary drawer — hidden until AI Summary is clicked -->
+      <div class="summary-drawer" id="drawer-${cid}">
+        <div class="summary-drawer-inner" id="content-${cid}"></div>
       </div>
     </div>`;
+}
+
+/* ── SUMMARIZE A CARD ────────────────────────────────────────────────
+   Called when user clicks "⬡ AI Summary" on a search result card.
+   1. Reads the paper's title + abstract from the button's data-paper attr
+   2. Checks for a saved Groq API key
+   3. POSTs a structured extraction prompt to Groq
+   4. Renders the response as labelled sections in the drawer
+   ─────────────────────────────────────────────────────────────────── */
+async function summarizeCard(btn) {
+  const cid     = btn.dataset.cid;
+  const drawer  = document.getElementById(`drawer-${cid}`);
+  const content = document.getElementById(`content-${cid}`);
+
+  // Toggle off if already open and done
+  if (drawer.classList.contains('open') && !btn.disabled) {
+    drawer.classList.remove('open');
+    btn.classList.remove('done');
+    btn.textContent = '⬡ AI Summary';
+    return;
+  }
+
+  // Get API key from localStorage
+  let apiKey = '';
+  try { apiKey = localStorage.getItem(OR_KEY_STORE) || ''; } catch(e) {}
+
+  // Open the drawer
+  drawer.classList.add('open');
+
+  if (!apiKey) {
+    content.innerHTML = `
+      <div class="summary-drawer-header">AI SUMMARY</div>
+      <div class="summary-no-key">
+        ⚠ No Groq API key found. Open the <strong>AI Chat</strong> panel (bottom-right),
+        paste your free key from
+        <a href="https://console.groq.com/keys" target="_blank" rel="noopener"
+           style="color:var(--accent-cyan)">console.groq.com/keys</a>
+        and click Save — then try again.
+      </div>`;
+    return;
+  }
+
+  // Parse paper data
+  let paper;
+  try { paper = JSON.parse(btn.dataset.paper.replace(/&quot;/g, '"')); }
+  catch(e) { paper = { title: 'Unknown', abstract: 'No abstract available.', authors: '', year: '' }; }
+
+  // Show loading state
+  btn.disabled = true;
+  btn.textContent = '◌ Analyzing…';
+  content.innerHTML = `
+    <div class="summary-drawer-header">AI SUMMARY</div>
+    <div class="summary-loading">
+      <div class="summary-loading-dot"></div>
+      <div class="summary-loading-dot"></div>
+      <div class="summary-loading-dot"></div>
+      <span>Groq is reading this paper…</span>
+    </div>`;
+
+  /* ── Structured extraction prompt ──────────────────────────────────
+     Instructs Groq to return a JSON object with 4 keys.
+     Using JSON forces a structured response that we can render into
+     labelled sections — much cleaner than free-form text for researchers.
+     ────────────────────────────────────────────────────────────────── */
+  const prompt = `You are a scientific summarization assistant. A researcher has found this paper:
+
+Title: ${paper.title}
+Authors: ${paper.authors} (${paper.year})
+Abstract: ${paper.abstract}
+
+Return ONLY a valid JSON object — no markdown, no preamble — with exactly these 4 keys:
+{
+  "keyFinding": "The single most important result or conclusion in 1–2 sentences.",
+  "methodology": "The core experimental or computational approach in 1 sentence.",
+  "significance": "Why this matters to the nanomaterials field in 1 sentence.",
+  "limitations": "The main limitation or caveat in 1 sentence."
+}`;
+
+  try {
+    const res = await fetch(OR_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model:       OR_MODEL,
+        max_tokens:  400,
+        temperature: 0.3,   // low temperature for factual extraction
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    let raw = data.choices?.[0]?.message?.content?.trim() || '';
+
+    // Strip accidental markdown fences if model adds them
+    raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/,'').trim();
+
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch(e) {
+      // Fallback: display raw text if JSON parse fails
+      parsed = { keyFinding: raw, methodology: '—', significance: '—', limitations: '—' };
+    }
+
+    const sections = [
+      { label: 'Key Finding',  key: 'keyFinding'   },
+      { label: 'Methodology',  key: 'methodology'  },
+      { label: 'Significance', key: 'significance' },
+      { label: 'Limitations',  key: 'limitations'  },
+    ];
+
+    content.innerHTML = `
+      <div class="summary-drawer-header">AI SUMMARY · ${_esc(paper.year)} · GROQ / LLAMA-3.3-70B</div>
+      ${sections.map(s => `
+        <div class="summary-section">
+          <div class="summary-section-label">${s.label}</div>
+          <div class="summary-section-text">${_esc(parsed[s.key] || '—')}</div>
+        </div>
+      `).join('')}
+      <div class="summary-tags-row">
+        <span class="tag" style="font-size:0.6rem;opacity:0.6">AI-generated · verify against full paper</span>
+      </div>`;
+
+    btn.disabled = false;
+    btn.classList.add('done');
+    btn.textContent = '✓ Summary Open';
+
+  } catch(err) {
+    content.innerHTML = `
+      <div class="summary-drawer-header">AI SUMMARY</div>
+      <div class="summary-error">⚠ ${_esc(err.message)}</div>`;
+    btn.disabled = false;
+    btn.textContent = '⬡ AI Summary';
+    console.error('[NanoLit Summarize]', err);
+  }
 }
 
 /* ── Loading state ───────────────────────────── */
@@ -2585,11 +3476,186 @@ function _renderLoadMore(shown, total) {
 }
 
 /* ── Update meta count bar ────────────────────── */
+/* ── Paper registry — keeps a flat list of all loaded papers for export ──
+   Updated by runSearch (reset+fill) and loadMoreResults (append).
+   exportPapers() reads from this array directly — no DOM scraping.       */
+let _exportRegistry = [];
+
 function _updateMeta(shown, total, q) {
   const el = document.getElementById('searchMetaCount');
   if (!el) return;
-  if (total === 0) { el.innerHTML = ''; return; }
+  if (total === 0) {
+    el.innerHTML = '';
+    // Hide export button when no results
+    const wrap = document.getElementById('exportWrap');
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
   el.innerHTML = `Showing <strong>${shown}</strong> of <strong>${total.toLocaleString()}</strong> papers for "<strong>${_esc(q)}</strong>"`;
+
+  // Show export button and update count note
+  const wrap  = document.getElementById('exportWrap');
+  const note  = document.getElementById('exportCountNote');
+  if (wrap) wrap.style.display = 'flex';
+  if (note) note.textContent   = `${_exportRegistry.length} paper${_exportRegistry.length !== 1 ? 's' : ''} loaded`;
+}
+
+/* ═══════════════════════════════════════════════
+   EXPORT ENGINE — Step 4
+   Converts _exportRegistry papers → BibTeX / RIS / CSV
+   and triggers a browser file download. No backend needed.
+═══════════════════════════════════════════════ */
+
+function toggleExportMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('exportMenu');
+  const note = document.getElementById('exportCountNote');
+  if (!menu) return;
+  const isOpen = menu.classList.toggle('open');
+  if (isOpen && note) {
+    note.textContent = `${_exportRegistry.length} paper${_exportRegistry.length !== 1 ? 's' : ''} loaded`;
+  }
+}
+
+document.addEventListener('click', () => {
+  document.getElementById('exportMenu')?.classList.remove('open');
+});
+
+function _triggerDownload(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+function _exportStr(s) {
+  return String(s || '').replace(/[{}\\]/g, '').trim();
+}
+
+/* BibTeX */
+function _toBibTeX(papers) {
+  return papers.map((p, i) => {
+    const firstAuthor = _exportStr(p.authors).split(',')[0].split(' ').pop() || 'Unknown';
+    const titleWord   = _exportStr(p.title).split(' ')[0].replace(/\W/g,'') || 'Paper';
+    const key         = `${firstAuthor}${p.year || '0000'}${titleWord}${i}`;
+    const authorField = _exportStr(p.authors);
+    const doi = p.url?.includes('doi.org/') ? p.url.split('doi.org/')[1] : '';
+    return [
+      `@article{${key},`,
+      `  title     = {${_exportStr(p.title)}},`,
+      `  author    = {${authorField}},`,
+      `  year      = {${p.year || ''}},`,
+      doi   ? `  doi       = {${doi}},`                : null,
+      p.url ? `  url       = {${_exportStr(p.url)}},`  : null,
+      `  note      = {Source: ${p.source === 'openalex' ? 'OpenAlex' : 'Semantic Scholar'}, ${p.cites} citations},`,
+      `}`,
+    ].filter(Boolean).join('\n');
+  }).join('\n\n');
+}
+
+/* RIS */
+function _toRIS(papers) {
+  return papers.map(p => {
+    const doi   = p.url?.includes('doi.org/') ? p.url.split('doi.org/')[1] : '';
+    const lines = ['TY  - JOUR', `TI  - ${_exportStr(p.title)}`];
+    _exportStr(p.authors).split(',').map(a => a.trim()).filter(Boolean)
+      .forEach(a => lines.push(`AU  - ${a}`));
+    lines.push(`PY  - ${p.year || ''}`);
+    if (doi)   lines.push(`DO  - ${doi}`);
+    if (p.url) lines.push(`UR  - ${_exportStr(p.url)}`);
+    lines.push(`N1  - ${p.cites} citations · via ${p.source === 'openalex' ? 'OpenAlex' : 'Semantic Scholar'}`);
+    lines.push('ER  - ');
+    return lines.join('\n');
+  }).join('\n\n');
+}
+
+/* CSV */
+function _toCSV(papers) {
+  const esc    = v => `"${String(v || '').replace(/"/g,'""')}"`;
+  const header = ['Title','Authors','Year','Citations','Open Access','Type','URL','Source'];
+  const rows   = papers.map(p => [
+    esc(p.title), esc(p.authors), esc(p.year), esc(p.cites),
+    esc(p.isOA ? 'Yes' : 'No'), esc(p.typeLabel), esc(p.url),
+    esc(p.source === 'openalex' ? 'OpenAlex' : 'Semantic Scholar'),
+  ]);
+  return [header.map(esc), ...rows].map(r => r.join(',')).join('\n');
+}
+
+/* Main dispatcher */
+function exportPapers(format) {
+  document.getElementById('exportMenu')?.classList.remove('open');
+  if (!_exportRegistry.length) { alert('No papers to export. Run a search first.'); return; }
+
+  const query    = (_ss.query || 'nanolit').replace(/\s+/g,'_').slice(0,30);
+  const date     = new Date().toISOString().slice(0,10);
+  const basename = `NanoLit_${query}_${date}`;
+
+  const formats = {
+    bibtex: { fn: _toBibTeX, ext: 'bib', mime: 'application/x-bibtex;charset=utf-8' },
+    ris:    { fn: _toRIS,    ext: 'ris', mime: 'application/x-research-info-systems;charset=utf-8' },
+    csv:    { fn: _toCSV,    ext: 'csv', mime: 'text/csv;charset=utf-8' },
+  };
+  const fmt = formats[format];
+  if (!fmt) return;
+
+  _triggerDownload(fmt.fn(_exportRegistry), `${basename}.${fmt.ext}`, fmt.mime);
+
+  const btn = document.getElementById('exportBtn');
+  if (btn) {
+    const prev = btn.textContent;
+    btn.textContent = `✓ ${format.toUpperCase()} downloaded`;
+    setTimeout(() => { btn.textContent = prev; }, 2200);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   SEARCH FILTERS — Step 3
+   Reads values from the filter bar and injects them
+   into OpenAlex API params. Semantic Scholar fallback
+   also filters client-side on year + OA since S2's
+   filter params differ significantly.
+═══════════════════════════════════════════════ */
+function _getFilters() {
+  return {
+    yearFrom: parseInt(document.getElementById('filterYearFrom')?.value) || null,
+    yearTo:   parseInt(document.getElementById('filterYearTo')?.value)   || null,
+    type:     document.getElementById('filterType')?.value               || '',
+    sort:     document.getElementById('filterSort')?.value               || 'relevance',
+    oaOnly:   document.getElementById('filterOA')?.checked               || false,
+  };
+}
+
+function updateFilterBadge() {
+  const f = _getFilters();
+  let count = 0;
+  if (f.yearFrom) count++;
+  if (f.yearTo)   count++;
+  if (f.type)     count++;
+  if (f.sort !== 'relevance') count++;
+  if (f.oaOnly)   count++;
+
+  const badge = document.getElementById('filterBadge');
+  const reset = document.getElementById('filterReset');
+  if (badge) {
+    badge.textContent = `${count} filter${count !== 1 ? 's' : ''} active`;
+    badge.classList.toggle('visible', count > 0);
+  }
+  if (reset) reset.style.display = count > 0 ? 'inline-block' : 'none';
+}
+
+function resetFilters() {
+  const ids = ['filterYearFrom','filterYearTo','filterType','filterSort','filterOA'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = false;
+    else if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  updateFilterBadge();
 }
 
 /* ── MAIN: runSearch ─────────────────────────── */
@@ -2633,7 +3699,9 @@ async function runSearch() {
   _ss.offset  = 0;
   _ss.total   = 0;
   _ss.loading = true;
-  _ss.source  = null;   // reset so OA is tried fresh on every new query
+  _ss.source  = null;
+  _cardIdx    = 0;
+  _exportRegistry = [];   // reset export registry for new search
   _updateMeta(0, 0, q);
 
   const container = document.getElementById('searchResults');
@@ -2649,13 +3717,23 @@ async function runSearch() {
     _ss.offset = papers.length;
 
     if (!papers.length) {
-      container.innerHTML = _renderEmpty(q);
+      // Give a helpful hint if filters may have narrowed results to zero
+      const f = _getFilters();
+      const hasFilters = f.yearFrom || f.yearTo || f.type || f.oaOnly || f.sort !== 'relevance';
+      container.innerHTML = hasFilters
+        ? `<div class="search-state-msg">
+            <div class="search-state-icon" style="color:var(--accent-amber)">◎</div>
+            <div class="search-state-title">No results with current filters</div>
+            <div class="search-state-desc">Try widening your year range, removing the Open Access filter, or <button onclick="resetFilters();runSearch()" style="background:none;border:none;color:var(--accent-cyan);cursor:pointer;font-size:inherit;padding:0;text-decoration:underline">resetting all filters</button>.</div>
+          </div>`
+        : _renderEmpty(q);
       _updateMeta(0, 0, q);
       return;
     }
 
-    const cards = papers.map(_renderCard).join('');  // papers already normalised by _normOA/_normSS
+    const cards = papers.map(_renderCard).join('');
     container.innerHTML = cards;
+    _exportRegistry = [...papers];   // fill registry with first page
     if (_ss.offset < total) container.innerHTML += _renderLoadMore(_ss.offset, total);
     _updateMeta(_ss.offset, total, q);
     if (typeof observeFadeIns === 'function') observeFadeIns();
@@ -2691,8 +3769,9 @@ async function loadMoreResults() {
 
     const container = document.getElementById('searchResults');
     const startIdx = _ss.offset;
-    const html = papers.map((p,i) => _renderCard(p, startIdx+i)).join('');  // papers already normalised
+    const html = papers.map((p,i) => _renderCard(p, startIdx+i)).join('');
     container.insertAdjacentHTML('beforeend', html);
+    _exportRegistry.push(...papers);   // append to export registry
     _ss.offset += papers.length;
 
     if (_ss.offset < _ss.total) {
@@ -2738,22 +3817,25 @@ const _aiSystem  = `You are NanoLit AI, an expert scientific assistant specialis
 
 /* ── Key UI helpers ─────────────────────────────── */
 function _aiShowLocked() {
-  const entry  = document.getElementById('aiKeyEntry');
-  const locked = document.getElementById('aiKeyLocked');
+  const entry   = document.getElementById('aiKeyEntry');
+  const locked  = document.getElementById('aiKeyLocked');
   const welcome = document.getElementById('aiWelcomeMsg');
-  if (entry)  entry.style.display  = 'none';
-  if (locked) locked.style.display = 'flex';
-  // Collapse welcome message once key is set — chat history takes its place
+  const gear    = document.getElementById('aiKeyGear');
+  if (entry)   entry.style.display   = 'none';
+  if (locked)  locked.style.display  = 'none';
   if (welcome) welcome.style.display = 'none';
+  if (gear)    gear.style.display    = 'flex';
 }
 
 function _aiShowEntry() {
-  const entry  = document.getElementById('aiKeyEntry');
-  const locked = document.getElementById('aiKeyLocked');
+  const entry   = document.getElementById('aiKeyEntry');
+  const locked  = document.getElementById('aiKeyLocked');
   const welcome = document.getElementById('aiWelcomeMsg');
-  if (entry)  entry.style.display  = 'block';
-  if (locked) locked.style.display = 'none';
+  const gear    = document.getElementById('aiKeyGear');
+  if (entry)   entry.style.display   = 'block';
+  if (locked)  locked.style.display  = 'none';
   if (welcome) welcome.style.display = 'block';
+  if (gear)    gear.style.display    = 'none';
 }
 
 /* ── localStorage key helpers ──────────────────────────── */
@@ -2789,8 +3871,10 @@ function aiClearKey() {
 function aiEditKey() {
   const entry  = document.getElementById('aiKeyEntry');
   const locked = document.getElementById('aiKeyLocked');
+  const gear   = document.getElementById('aiKeyGear');
   if (entry)  entry.style.display  = 'block';
   if (locked) locked.style.display = 'none';
+  if (gear)   gear.style.display   = 'none';
   setTimeout(() => document.getElementById('aiKeyInput')?.focus(), 50);
 }
 
@@ -2989,7 +4073,8 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ── Knowledge graph (needs layout to be settled) ── */
   setTimeout(() => _safe('graph', initKnowledgeGraph), 500);
 
-  /* ── Paper simplifier — do NOT auto-run on load (no fake results on startup) ── */
+  /* ── Paper simplifier — init word counter ── */
+  updateSimplifyCount();
   // BACKEND REQUIRED: When simplifyPaper() is real, you may restore auto-run here.
 
   /* ── Fade-in observer ── */
