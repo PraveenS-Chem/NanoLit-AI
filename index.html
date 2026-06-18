@@ -5864,69 +5864,10 @@ function _aiSetBusy(b) {
   if (inp) inp.disabled = b;
 }
 
-/* ── Main send ────────────────────────────────────────── */
-async function sendAIMessage() {
-  const input  = document.getElementById('aiInput');
-  const keyInp = document.getElementById('aiKeyInput');
-  const msg    = (input?.value || '').trim();
-  if (!msg) return;
-
-  // Key: live field takes priority, then localStorage
-  let apiKey = (keyInp?.value || '').trim();
-  if (!apiKey) {
-    try { apiKey = localStorage.getItem(OR_KEY_STORE) || ''; } catch(e) {}
-  }
-
-  if (!apiKey) {
-    _aiAppend('assistant',
-      '⚠ Paste your free Groq API key above and click Save. ' +
-      'Get one free at <a href="https://console.groq.com/keys" target="_blank" ' +
-      'rel="noopener" style="color:var(--accent-cyan)">console.groq.com/keys</a> — no card needed.');
-    return;
-  }
-
-  input.value = '';
-  _aiAppend('user', _esc(msg));
-  _aiSetBusy(true);
-  _aiShowTyping();
-  _aiHistory.push({ role: 'user', content: msg });
-
-  try {
-    const res = await fetch(OR_API, {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model:       OR_MODEL,
-        messages:    [{ role: 'system', content: _aiSystem }, ..._aiHistory.slice(-10)],
-        max_tokens:  300,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      if (res.status === 401) throw new Error('Invalid API key — check openrouter.ai/keys');
-      if (res.status === 429) throw new Error('Rate limit reached — wait a moment then retry');
-      throw new Error(errData?.error?.message || `HTTP ${res.status}`);
-    }
-
-    const data  = await res.json();
-    const reply = data.choices?.[0]?.message?.content?.trim() || 'No response. Please retry.';
-    _aiHistory.push({ role: 'assistant', content: reply });
-    _aiHideTyping();
-    _aiAppend('assistant', _esc(reply).replace(/\n/g, '<br>'));
-
-  } catch(err) {
-    _aiHideTyping();
-    _aiAppend('assistant', '⚠ ' + _esc(err.message));
-    console.error('[NanoLit AI]', err);
-  } finally {
-    _aiSetBusy(false);
-  }
-}
+/* NOTE: the old pre-Step-9 sendAIMessage() duplicate that referenced the
+   undefined _aiSystem variable has been removed. The correct contextual
+   version (using _buildSystemPrompt()) defined earlier in this file is
+   the only sendAIMessage() now — see Step 9 implementation above. */
 
 /* aiTab listener moved into DOMContentLoaded — see INIT block */
 window.addEventListener('scroll', () => {
